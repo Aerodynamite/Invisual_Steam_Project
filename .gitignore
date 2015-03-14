@@ -1,0 +1,7 @@
+# Ignore npm installed modules
+node_modules/
+
+# WebStorm personal settings
+**/.idea/workspace.xml
+**/.idea/tasks.xml
+*.iws
