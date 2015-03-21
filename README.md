@@ -4,8 +4,8 @@ Project by Team Invisual for the Information Visualization course @KULeuven.
 ## Installation instructions:
 
 1. Install node.js
-2. Install PyCharm (optional)
-3. Go into PyCharm_Project directory and open CMD. Execute "npm install express" and "npm install request".
+2. Install WebStorm (optional)
+3. Go into WebStorm_Project directory and open CMD. Execute "npm install express" and "npm install request".
 
 
 ## Running instructions:
