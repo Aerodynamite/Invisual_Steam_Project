@@ -32,15 +32,24 @@
         // Global Variables
         var IDs = [];
         var genres = [];
+        var releaseDates = [];
+        var htmlId01Code = "";
+        var onGoingRequests = 0;
+        var definedNotWorkingIDs = [2725, 4270, 7, 962, 5778, 5937, 11604, 23120, 26140, 35134, 42967, 57940, 72705, 80598, 81689, 81990, 101008, 208152, 211954, 216610, 224243, 235611, 245683, 241970];
 
-        // get all IDS + genres
-        // WARNING: WILL PERFORM 16000 REQUESTS, MANY OF WHOM WILL FAIL!!!!
-        // Getting IDs is ok, but the genres will fail a LOT
-//        unOfficialAPI(allGamesUrl, getAllAppIDs);
-        //
+        var notWorkingIDs = [];
 
-//        officialAPI(playerSummaryUrl, printPlayerSummaryProfile);
-        unOfficialAPI(appdetailsUrl + "440", getGenresOfGame); // test for TF2 (id = 440)
+        // EXAMPLE USAGES
+        //  officialAPI(playerSummaryUrl, printPlayerSummaryProfile);
+        //  unOfficialAPI(appdetailsUrl + "440", getGenresOfGame); // test for TF2 (id = 440)
+
+
+        // DEMO VIS 1 ////////
+        unOfficialAPI(allGamesUrl, getAllAppIDs);
+        // getAllAppIDs calls getSomeGenres!
+        ///////////////////////
+
+
 
         function officialAPI(url, func) {
             // Request URL through proxy
@@ -56,11 +65,11 @@
 
         // Difference with officialAPI function is we don't need to take data.response
         function unOfficialAPI(url, func) {
-            console.log("unOfficial API call with Func");
+//            console.log("unOfficial API call with Func");
             // Request URL through proxy
             $.get(proxyUrl, {urlToFetch: url})
                     .done(function (data) {
-                        console.log(data);
+//                        console.log(data);
                         func(data);
                     }).fail(function () {
                         $('body').text('Request to ' + proxyUrl + ' failed!');
@@ -81,15 +90,17 @@
 
         function getAllAppIDs(data) {
             console.log("Getting all app IDs..");
+            console.log(data);
             var apps = data.applist.apps.length;
 
             for (var i = 0; i < apps; i++) {
                 IDs[IDs.length] = data.applist.apps[i].appid;
             }
-            console.log("Finished!");
+            console.log("Got all IDs.");
 
             // A LOT WILL FAIL IF THERE ARE TOO MANY IDs
-            getAllGenres();
+//            getAllGenres();
+            getSomeGenres(1, 15000, 150);
         }
 
         function getAllGenres() {
@@ -103,25 +114,91 @@
         // Saves genres of game into global genres array
         // And temporarily also prints out the genres of the game on the web page in an unordered list
         function getGenresOfGame(appDetails) {
-            console.log("saving Genres..");
+//            console.log(appDetails);
             var keys = [];
             for (var key in appDetails) {
                 keys.push(key);
             }
             var idKey = keys[0];
 
-            var out = "<h2>Genres of " + appDetails[idKey].data.name + "</h2><ul>";
+            if (appDetails[idKey].success == true) {
+                if ("genres" in appDetails[idKey].data) {
+                    htmlId01Code += "<h2>Genres of " + appDetails[idKey].data.name + "</h2><ul>";
 
-            for (var i = 0; i < appDetails[idKey].data.genres.length; i++) {
-                var genre = appDetails[idKey].data.genres[i].description;
-                genres.push(genre);
-                out += "<li>" + genre + "</li>";
+                    for (var i = 0; i < appDetails[idKey].data.genres.length; i++) {
+                        var genre = appDetails[idKey].data.genres[i].description;
+                        htmlId01Code += "<li>" + genre + "</li>";
+                    }
+                    htmlId01Code += "</ul>"
+
+                    genres.push(appDetails[idKey].data.genres);
+
+                    var x = [idKey, appDetails[idKey].data.release_date.date];
+                    releaseDates.push(x);
+                }
+            } else {
+//                console.log("no success: " + idKey);
+                notWorkingIDs.push(idKey);
             }
-            out += "</ul>"
 
-            document.getElementById("id01").innerHTML = out;
-            console.log("Finished Saving!");
+            onGoingRequests -= 1;
+
+//            console.log(releaseDates.length);
+
+            document.getElementById("id01").innerHTML = htmlId01Code;
         }
+
+        function getSomeGenres(start, stop, interval) {
+            var i = start;
+            while (i <= stop && i < IDs.length) {
+                // if ID is in definedNotWorkingIDs, dont execute request
+                // this increases the number of requests you can do since
+                // it's limited with the unofficial requests
+                if (!(IDs[i] in definedNotWorkingIDs)) {
+                    onGoingRequests += 1;
+                    unOfficialAPI(appdetailsUrl + IDs[i], getGenresOfGame);
+                }
+                i += interval;
+            }
+
+            checkIfAllRequestsAreFinished();
+        }
+
+        function checkIfAllRequestsAreFinished()
+        {
+            var i = 0, limit = 500, busy = false;
+
+            var processor = setInterval(function()
+            {
+                if(!busy)
+                {
+                    busy = true;
+
+                    if (onGoingRequests == 0) {
+                        console.log("FINISHED");
+
+                        console.log(notWorkingIDs);
+                        console.log("Genres.length = " + genres.length);
+                        console.log(genres);
+                        console.log("ReleaseDates.length = " + releaseDates.length);
+                        console.log(releaseDates);
+
+                        // call function to start visualisation here
+
+                        clearInterval(processor);
+                    }
+
+                    if(++i == limit)
+                    {
+                        // Something probably went wrong
+                        // Or you are doing a billion requests
+                        clearInterval(processor);
+                    }
+                    busy = false;
+                }
+            }, 100);
+        }
+
 
     </script>
 
