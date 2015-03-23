@@ -29,8 +29,8 @@
         var proxyUrl = 'http://localhost:3000/proxy';
 
         // Steam
-        var webAPIKey = "YOUR_KEY"; // MAKE SURE THIS ISN'T FILLED IN WHEN COMMITTING TO GITHUB
-        var userSteamID64 = "YOUR_ID";
+        var webAPIKey = "8055993BA89C96FE0EA244248E29501B"; // MAKE SURE THIS ISN'T FILLED IN WHEN COMMITTING TO GITHUB
+        var userSteamID64 = "76561198052487784";
 
         // Official API URLs
         // (Documented here: https://developer.valvesoftware.com/wiki/Steam_Web_API)
@@ -120,6 +120,7 @@
             // A LOT WILL FAIL IF THERE ARE TOO MANY IDs
 //            getAllGenres();
             getSomeGenres(1, 15000, 150); // TODO: change back to (1, 15000, 150)
+            // 391 = fail
         }
 
         function getAllGenres() {
@@ -157,8 +158,10 @@
                     //console.log(game);
                     //console.log(JSON.stringify(game));
                     jsonString = jsonString + JSON.stringify(game);
+                    //console.log("id " + idKey +" stringed");
                     // store game object [DRIES]
                     dataToBeStored.push(game);
+                    // console.log(onGoingRequests);
                 }
             } else {
 //                console.log("no success: " + idKey);
@@ -209,14 +212,14 @@
                         console.log(releaseDates);
 
                         // call function to start visualisation here
-						console.log(jsonString);
+						console.log("finished");
 						// jsonString.replaceAll("{","{\n");
 						// jsonString.replaceAll(",",",\n");
 						// console.log(jsonString);
 						// give downloadable jsonfile
-						var dlurl = 'data:text/json;charset=utf8,' + encodeURIComponent(jsonString);
-						window.open(dlurl, '_blank');
-						window.focus();
+						//var dlurl = 'data:text/json;charset=utf8,' + encodeURIComponent(jsonString);
+						//window.open(dlurl, '_blank');
+						//window.focus();
 						
                         combineAndSortGenresAndDates();
 
@@ -281,7 +284,7 @@
                 // a must be equal to b
                 return 0;});
 
-//            console.log(all_genres);
+            console.log(all_genres);
             //////////////////////////////////// end melvin code 2
 
             // convert to my object for visualisation
@@ -331,7 +334,7 @@
                 return 0;});
 
             console.log(data);
-            //visualise(data);
+            visualise(data);
         }
 
 
