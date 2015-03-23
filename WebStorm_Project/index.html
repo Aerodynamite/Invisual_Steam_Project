@@ -2,21 +2,35 @@
 <html>
 <head>
     <title>Invisual Project</title>
+	
+	<script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+    <script src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
+    <script src="scripts.js"></script>
+
+    <style type="text/css">
+        body{font-family: Arial, sans-serif;font-size:10px;}
+        .axis path,.axis line {fill: none;stroke:#b6b6b6;shape-rendering: crispEdges;}
+        /*.tick line{fill:none;stroke:none;}*/
+        .tick text{fill:#999;}
+        g.journal.active{cursor:pointer;}
+        text.label{font-size:12px;font-weight:bold;cursor:pointer;}
+        text.value{font-size:12px;font-weight:bold;}
+    </style>
 </head>
 <body>
 
-<h1> API Tests </h1>
+<h1> First visualisation example </h1>
+
 <div id="id01"></div>
 
-    <script src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
 
     <script>
         // Proxy
         var proxyUrl = 'http://localhost:3000/proxy';
 
         // Steam
-        var webAPIKey = "YOURKEY"; // MAKE SURE THIS ISN'T FILLED IN WHEN COMMITTING TO GITHUB
-        var userSteamID64 = "YOURID";
+        var webAPIKey = "8055993BA89C96FE0EA244248E29501B"; // MAKE SURE THIS ISN'T FILLED IN WHEN COMMITTING TO GITHUB
+        var userSteamID64 = "76561198052487784";
 
         // Official API URLs
         // (Documented here: https://developer.valvesoftware.com/wiki/Steam_Web_API)
@@ -35,10 +49,15 @@
         var releaseDates = [];
         var htmlId01Code = "";
         var onGoingRequests = 0;
-        var definedNotWorkingIDs = [2725, 4270, 7, 962, 5778, 5937, 11604, 23120, 26140, 35134, 42967, 57940, 72705, 80598, 81689, 81990, 101008, 208152, 211954, 216610, 224243, 235611, 245683, 241970];
+        var definedNotWorkingIDs = [2725, 4270, 7, 962, 5778, 5937, 11604, 23120, 26140, 35134, 42967, 57940, 72705,
+            80598, 81689, 81990, 101008, 208152, 211954, 216610, 224243, 235611, 245683, 241970, 50410, 5572, 330361,
+            332223];
 
         var notWorkingIDs = [];
-
+        var combinedSorted = [];
+		
+		var jsonString = "";
+		var dataToBeStored = [];
         // EXAMPLE USAGES
         //  officialAPI(playerSummaryUrl, printPlayerSummaryProfile);
         //  unOfficialAPI(appdetailsUrl + "440", getGenresOfGame); // test for TF2 (id = 440)
@@ -100,7 +119,7 @@
 
             // A LOT WILL FAIL IF THERE ARE TOO MANY IDs
 //            getAllGenres();
-            getSomeGenres(1, 15000, 150);
+            getSomeGenres(392, 400, 1); // TODO: change back to (1, 15000, 150)
         }
 
         function getAllGenres() {
@@ -123,18 +142,23 @@
 
             if (appDetails[idKey].success == true) {
                 if ("genres" in appDetails[idKey].data) {
-                    htmlId01Code += "<h2>Genres of " + appDetails[idKey].data.name + "</h2><ul>";
-
+                	// create game object [DRIES]
+                	var game = {};
+                	game.id = idKey;
+                	game.name = appDetails[idKey].data.name;
                     for (var i = 0; i < appDetails[idKey].data.genres.length; i++) {
                         var genre = appDetails[idKey].data.genres[i].description;
-                        htmlId01Code += "<li>" + genre + "</li>";
                     }
-                    htmlId01Code += "</ul>"
-
                     genres.push(appDetails[idKey].data.genres);
-
+                    game.genres = appDetails[idKey].data.genres;
                     var x = [idKey, appDetails[idKey].data.release_date.date];
                     releaseDates.push(x);
+                    game.releaseDate = appDetails[idKey].data.release_date.date;
+                    //console.log(game);
+                    //console.log(JSON.stringify(game));
+                    jsonString = jsonString + JSON.stringify(game);
+                    // store game object [DRIES]
+                    dataToBeStored.push(game);
                 }
             } else {
 //                console.log("no success: " + idKey);
@@ -145,7 +169,7 @@
 
 //            console.log(releaseDates.length);
 
-            document.getElementById("id01").innerHTML = htmlId01Code;
+//            document.getElementById("id01").innerHTML = htmlId01Code;
         }
 
         function getSomeGenres(start, stop, interval) {
@@ -154,13 +178,13 @@
                 // if ID is in definedNotWorkingIDs, dont execute request
                 // this increases the number of requests you can do since
                 // it's limited with the unofficial requests
-                if (!(IDs[i] in definedNotWorkingIDs)) {
+                if (definedNotWorkingIDs.indexOf(IDs[i]) == -1) {
                     onGoingRequests += 1;
                     unOfficialAPI(appdetailsUrl + IDs[i], getGenresOfGame);
                 }
                 i += interval;
             }
-
+			
             checkIfAllRequestsAreFinished();
         }
 
@@ -177,6 +201,7 @@
                     if (onGoingRequests == 0) {
                         console.log("FINISHED");
 
+                        console.log("notWorkingIDs (if not empty, add to list!");
                         console.log(notWorkingIDs);
                         console.log("Genres.length = " + genres.length);
                         console.log(genres);
@@ -184,6 +209,16 @@
                         console.log(releaseDates);
 
                         // call function to start visualisation here
+						console.log(jsonString);
+						// jsonString.replaceAll("{","{\n");
+						// jsonString.replaceAll(",",",\n");
+						// console.log(jsonString);
+						// give downloadable jsonfile
+						var dlurl = 'data:text/json;charset=utf8,' + encodeURIComponent(jsonString);
+						window.open(dlurl, '_blank');
+						window.focus();
+						
+                        combineAndSortGenresAndDates();
 
                         clearInterval(processor);
                     }
@@ -199,7 +234,214 @@
             }, 100);
         }
 
+        function combineAndSortGenresAndDates() {
+            // Genres = Array of arrays.
+            // Array[0][0].description = "Strategy" || Array[0][0].id = "2"
 
+            // ReleaseDates = Array of Array[2]
+            // Array[0][0] = id
+            // Array[0][1] = date ("4 May, 2007")
+
+            // Melvin code 2
+            var all_genres = [];
+            var found;
+            for (var it1 = 0; it1 < genres.length; it1++) {
+                var game = genres[it1];
+                var date = releaseDates[it1][1];
+                var date_array = date.split(" ");
+                var year = date_array[2];
+
+                for (var it2 = 0; it2 < game.length; it2++) {
+                    var genre = game[it2].description;
+                    //search the current genre in the list of the genres already counted, when found increase it's counter by 1
+                    found = false;
+                    for (var it3 = 0; it3 < all_genres.length && !found; it3++) {
+                        if (all_genres[it3].name.localeCompare(genre) == 0 && year == all_genres[it3].year) {
+                            all_genres[it3].amount++;
+                            found = true;
+                        }
+                    }
+                    //if the genre is not found in the array, make a new entry and put it's counter on 1
+                    if (!found) {
+                        all_genres.push({
+                            "name":genre,
+                            "amount":1,
+                            "year":year
+                        });
+                    }
+                }
+            }
+            all_genres.sort(function (a, b) {
+                if (a.year > b.year) {
+                    return -1;
+                }
+                if (a.year < b.year) {
+                    return 1;
+                }
+                // a must be equal to b
+                return 0;});
+
+//            console.log(all_genres);
+            //////////////////////////////////// end melvin code 2
+
+            // convert to my object for visualisation
+            var data = [];
+            for (var i = 0; i < all_genres.length; i++) {
+                var genre = all_genres[i].name;
+                var year = all_genres[i].year;
+                var amount = all_genres[i].amount;
+
+                // if genre already in data, it has been handled before
+                var found = false;
+                for (var j = 0; j < data.length; j++) {
+                    if (data[j].genre == genre) {
+                        found = true;
+                    }
+                }
+
+                if (!found) {
+                    // Add current year to data
+                    data.push({
+                        "games" : [[year, amount]],
+                        "total" : amount,
+                        "genre" : genre
+                    });
+
+                    // search the current genre in future years of all_genres
+                    // start from next position in i, to avoid double counting
+                    for (var j = i+1; j < all_genres.length; j++) {
+                        if (all_genres[j].name == genre) {
+                            var newYear = all_genres[j].year;
+                            var newAmount = all_genres[j].amount;
+                            data[data.length-1].games.push([newYear, newAmount]);
+                            data[data.length-1].total += newAmount;
+                        }
+                    }
+                }
+            }
+
+            data.sort(function (a, b) {
+                if (a.total > b.total) {
+                    return -1;
+                }
+                if (a.total < b.total) {
+                    return 1;
+                }
+                // a must be equal to b
+                return 0;});
+
+            console.log(data);
+            //visualise(data);
+        }
+
+
+
+        //////////////// VISUALIZATION EXAMPLE
+        ////////// http://neuralengr.com/asifr/journals/
+        function truncate(str, maxLength, suffix) {
+            if(str.length > maxLength) {
+                str = str.substring(0, maxLength + 1);
+                str = str.substring(0, Math.min(str.length, str.lastIndexOf(" ")));
+                str = str + suffix;
+            }
+            return str;
+        }
+
+        function visualise(data) {
+
+            var margin = {top: 20, right: 200, bottom: 0, left: 20},
+                    width = 300,
+                    height = 650;
+
+            var start_year = 2007,
+                end_year = 2015;
+
+            var c = d3.scale.category20c();
+
+            var x = d3.scale.linear()
+                    .range([0, width]);
+
+            var xAxis = d3.svg.axis()
+                    .scale(x)
+                    .orient("top");
+
+            var formatYears = d3.format("0000");
+            xAxis.tickFormat(formatYears);
+
+            var svg = d3.select("body").append("svg")
+                    .attr("width", width + margin.left + margin.right)
+                    .attr("height", height + margin.top + margin.bottom)
+                    .style("margin-left", margin.left + "px")
+                    .append("g")
+                    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+            x.domain([start_year, end_year]);
+            var xScale = d3.scale.linear()
+                    .domain([start_year, end_year])
+                    .range([0, width]);
+
+            svg.append("g")
+                    .attr("class", "x axis")
+                    .attr("transform", "translate(0," + 0 + ")")
+                    .call(xAxis);
+
+            for (var j = 0; j < data.length; j++) {
+                var g = svg.append("g").attr("class","journal");
+
+                var circles = g.selectAll("circle")
+                        .data(data[j]['games'])
+                        .enter()
+                        .append("circle");
+
+                var text = g.selectAll("text")
+                        .data(data[j]['games'])
+                        .enter()
+                        .append("text");
+
+                var rScale = d3.scale.linear()
+                        .domain([0, d3.max(data[j]['games'], function(d) { return d[1]; })])
+                        .range([2, 9]);
+
+                circles
+                        .attr("cx", function(d, i) { return xScale(d[0]); })
+                        .attr("cy", j*20+20)
+                        .attr("r", function(d) { return rScale(d[1]); })
+                        .style("fill", function(d) { return c(j); });
+
+                text
+                        .attr("y", j*20+25)
+                        .attr("x",function(d, i) { return xScale(d[0])-5; })
+                        .attr("class","value")
+                        .text(function(d){ return d[1]; })
+                        .style("fill", function(d) { return c(j); })
+                        .style("display","none");
+
+                g.append("text")
+                        .attr("y", j*20+25)
+                        .attr("x",width+20)
+                        .attr("class","label")
+                        .text(truncate(data[j]['genre'],30,"..."))
+                        .style("fill", function(d) { return c(j); })
+                        .on("mouseover", mouseover)
+                        .on("mouseout", mouseout);
+            }
+
+            function mouseover(p) {
+                var g = d3.select(this).node().parentNode;
+                d3.select(g).selectAll("circle").style("display","none");
+                d3.select(g).selectAll("text.value").style("display","block");
+            }
+
+            function mouseout(p) {
+                var g = d3.select(this).node().parentNode;
+                d3.select(g).selectAll("circle").style("display","block");
+                d3.select(g).selectAll("text.value").style("display","none");
+            }
+        }
+
+        /////////////////////////////////////////////////
+        
+		
     </script>
 
 </body>
