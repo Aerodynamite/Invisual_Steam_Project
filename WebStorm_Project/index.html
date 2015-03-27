@@ -49,6 +49,7 @@
         var releaseDates = [];
         var htmlId01Code = "";
         var onGoingRequests = 0;
+        var idsOnGoingRequests = [];
         var definedNotWorkingIDs = [2725, 4270, 7, 962, 5778, 5937, 11604, 23120, 26140, 35134, 42967, 57940, 72705,
             80598, 81689, 81990, 101008, 208152, 211954, 216610, 224243, 235611, 245683, 241970, 50410, 5572, 330361,
             332223];
@@ -119,7 +120,7 @@
 
             // A LOT WILL FAIL IF THERE ARE TOO MANY IDs
 //            getAllGenres();
-            getSomeGenres(1, 15000, 150); // TODO: change back to (1, 15000, 150)
+            getSomeGenres(1601, 1700, 1); // TODO: change back to (1, 15000, 150)
             // 391 = fail
         }
 
@@ -155,13 +156,14 @@
                     var x = [idKey, appDetails[idKey].data.release_date.date];
                     releaseDates.push(x);
                     game.releaseDate = appDetails[idKey].data.release_date.date;
-                    //console.log(game);
+                    console.log(game);
                     //console.log(JSON.stringify(game));
                     jsonString = jsonString + JSON.stringify(game);
-                    //console.log("id " + idKey +" stringed");
+                    console.log("id " + idKey +" stringed");
                     // store game object [DRIES]
                     dataToBeStored.push(game);
-                    // console.log(onGoingRequests);
+                    console.log(onGoingRequests);
+                    console.log(idsOnGoingRequests);
                 }
             } else {
 //                console.log("no success: " + idKey);
@@ -169,6 +171,8 @@
             }
 
             onGoingRequests -= 1;
+            var index = idsOnGoingRequests.indexOf(idKey);
+            delete idsOnGoingRequests[index];
 
 //            console.log(releaseDates.length);
 
@@ -183,6 +187,7 @@
                 // it's limited with the unofficial requests
                 if (definedNotWorkingIDs.indexOf(IDs[i]) == -1) {
                     onGoingRequests += 1;
+                    idsOnGoingRequests.push(IDs[i]);
                     unOfficialAPI(appdetailsUrl + IDs[i], getGenresOfGame);
                 }
                 i += interval;
@@ -217,9 +222,9 @@
 						// jsonString.replaceAll(",",",\n");
 						// console.log(jsonString);
 						// give downloadable jsonfile
-						//var dlurl = 'data:text/json;charset=utf8,' + encodeURIComponent(jsonString);
-						//window.open(dlurl, '_blank');
-						//window.focus();
+						var dlurl = 'data:text/json;charset=utf8,' + encodeURIComponent(jsonString);
+						window.open(dlurl, '_blank');
+						window.focus();
 						
                         combineAndSortGenresAndDates();
 
@@ -334,7 +339,7 @@
                 return 0;});
 
             console.log(data);
-            visualise(data);
+            //visualise(data);
         }
 
 
