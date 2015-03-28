@@ -224,9 +224,14 @@
                     .domain([0, yStackMax])
                     .range([height, 0]);
 
-            var color = d3.scale.linear()
-                    .domain([0, n - 1])
-                    .range(["#aad", "#556"]);
+            var colorArray = ["#538ed5", "#953735", "#e46d0a", "#75923c", "#b2a1c7", "#dc143c", "#87cefa", "#90ee90", "#add8e6", "#d3d3d3", "#cf1256", "#12cf5e"];
+
+            var color = d3.scale.ordinal()
+                    .range(colorArray);
+
+//            var color = d3.scale.linear()
+//                    .domain([0, n - 1])
+//                    .range(["#aad", "#556"]);
 
             var xAxis = d3.svg.axis()
                     .scale(x)
