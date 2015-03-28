@@ -6,18 +6,36 @@
 	<META http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
 	<script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
     <script src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
-    <script src="scripts.js"></script>
     <script src="data1-1600.json"></script>
 
-    <style type="text/css">
-        body{font-family: Arial, sans-serif;font-size:10px;}
-        .axis path,.axis line {fill: none;stroke:#b6b6b6;shape-rendering: crispEdges;}
-        /*.tick line{fill:none;stroke:none;}*/
-        .tick text{fill:#999;}
-        g.journal.active{cursor:pointer;}
-        text.label{font-size:12px;font-weight:bold;cursor:pointer;}
-        text.value{font-size:12px;font-weight:bold;}
+    <style>
+        body {
+            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+            margin: auto;
+            position: relative;
+            width: 960px;
+        }
+        text {
+            font: 10px sans-serif;
+        }
+        .axis path,
+        .axis line {
+            fill: none;
+            stroke: #000;
+            shape-rendering: crispEdges;
+        }
+        form {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+        }
     </style>
+
+    <form>
+        <label><input type="radio" name="mode" value="grouped"> Grouped</label>
+        <label><input type="radio" name="mode" value="stacked" checked> Stacked</label>
+    </form>
+
 </head>
 <body>
 
@@ -27,18 +45,15 @@
 
     <script>
     	$.getJSON("data1-1600.json", function(json) {
-   			 console.log(json); // this will show the info it in firebug console
-   			 combineAndSortGenresAndDates(json);
+//            console.log("JSON data");
+//   			console.log(json); // this will show the info it in firebug console
 
+   			var data = combineAndSortGenresAndDates(json);
+
+            visualise(data);
 		});
-		   	function combineAndSortGenresAndDates(json) {
-            // Genres = Array of arrays.
-            // Array[0][0].description = "Strategy" || Array[0][0].id = "2"
 
-            // ReleaseDates = Array of Array[2]
-            // Array[0][0] = id
-            // Array[0][1] = date ("4 May, 2007")
-
+        function combineAndSortGenresAndDates(json) {
             // Melvin code 2
             var all_genres = [];
             var found;
@@ -78,43 +93,56 @@
                 // a must be equal to b
                 return 0;});
 
-            console.log(all_genres);
- 		// convert to my object for visualisation
+//            console.log("Melvin object");
+//            console.log(all_genres);
+
+ 		    // convert to suitable object for visualisation
             var data = [];
             for (var i = 0; i < all_genres.length; i++) {
                 var genre = all_genres[i].name;
-                var year = all_genres[i].year;
+                var year = parseInt(all_genres[i].year);
                 var amount = all_genres[i].amount;
 
-                // if genre already in data, it has been handled before
-                var found = false;
-                for (var j = 0; j < data.length; j++) {
-                    if (data[j].genre == genre) {
-                        found = true;
+                if (!isNaN(year)) { // make sure the year is a number
+
+                    // if genre already in data, it has been handled before
+                    var found = false;
+                    for (var j = 0; j < data.length; j++) {
+                        if (data[j].genre == genre) {
+                            found = true;
+                        }
                     }
-                }
 
-                if (!found) {
-                    // Add current year to data
-                    data.push({
-                        "games" : [[year, amount]],
-                        "total" : amount,
-                        "genre" : genre
-                    });
+                    if (!found) {
+                        // Add current year to data
+                        data.push({
+                            games: [
+                                {
+                                    x: year,
+                                    y: amount
+                                }
+                            ],
+                            total: amount,
+                            genre: genre
+                        });
 
-                    // search the current genre in future years of all_genres
-                    // start from next position in i, to avoid double counting
-                    for (var j = i+1; j < all_genres.length; j++) {
-                        if (all_genres[j].name == genre) {
-                            var newYear = all_genres[j].year;
-                            var newAmount = all_genres[j].amount;
-                            data[data.length-1].games.push([newYear, newAmount]);
-                            data[data.length-1].total += newAmount;
+                        // search the current genre in future years of all_genres
+                        // start from next position in i, to avoid double counting
+                        for (var j = i + 1; j < all_genres.length; j++) {
+                            if (all_genres[j].name == genre) {
+                                var newYear = parseInt(all_genres[j].year);
+                                if (!isNaN(newYear)) {
+                                    var newAmount = all_genres[j].amount;
+                                    data[data.length - 1].games.push({x: newYear, y: newAmount});
+                                    data[data.length - 1].total += newAmount;
+                                }
+                            }
                         }
                     }
                 }
             }
 
+            // sort the genres from most games to least games
             data.sort(function (a, b) {
                 if (a.total > b.total) {
                     return -1;
@@ -125,114 +153,158 @@
                 // a must be equal to b
                 return 0;});
 
-            console.log(data);
-            visualise(data);
-        }
-
-
-
-        //////////////// VISUALIZATION EXAMPLE
-        ////////// http://neuralengr.com/asifr/journals/
-        function truncate(str, maxLength, suffix) {
-            if(str.length > maxLength) {
-                str = str.substring(0, maxLength + 1);
-                str = str.substring(0, Math.min(str.length, str.lastIndexOf(" ")));
-                str = str + suffix;
+            // sort the games of each genre from old to new
+            for (var genre = 0; genre < data.length; genre++) {
+                data[genre].games.sort(function (a, b) {
+                    if (a.x < b.x)
+                        return -1;
+                    if (a.x > b.x)
+                        return 1;
+                    return 0;
+                });
             }
-            return str;
+
+            // add the missing years to each genre
+            for (var genre = 0; genre < data.length; genre++) {
+                var newGames = [];
+                var prevYear = 1997;
+                for (var year = 0; prevYear < 2015; ) {
+                    // if the current existing year, isn't the successor of the previous year
+                    if (year < data[genre].games.length && data[genre].games[year].x > prevYear + 1
+                        || year >= data[genre].games.length && prevYear < 2015) {
+                        // add the year to the array with a count of 0 games
+                        newGames.push({
+                            x: prevYear+1,
+                            y: 0
+                        });
+                    }
+                    else { // current year is the successor
+                        // add to array
+                        newGames.push(data[genre].games[year]);
+                        year++; // go to next year in existing array
+                    }
+                    prevYear++;
+                }
+                data[genre].games = newGames;
+            }
+
+            console.log("My object");
+            console.log(data);
+
+            return data;
         }
 
+        //////////////// VISUALIZATION
         function visualise(data) {
 
-            var margin = {top: 20, right: 200, bottom: 0, left: 20},
-                    width = 300,
-                    height = 650;
+            var n = 5, // number of layers (= # genres)
+                m = 18, // number of samples per layer (= # years)
+                stack = d3.layout.stack(),
+                genreCounter = 0,
+                layers = stack(d3.range(n).map(function() {
+//                    console.log(temp);
+                    var ret = data[genreCounter].games;
+                    genreCounter = genreCounter + 1;
+//                    console.log(ret);
+                    return ret;
+                })),
+                yGroupMax = d3.max(layers, function(layer) { return d3.max(layer, function(d) { return d.y; }); }),
+                yStackMax = d3.max(layers, function(layer) { return d3.max(layer, function(d) { return d.y0 + d.y; }); });
 
-            var start_year = 2007,
-                end_year = 2015;
+            var margin = {top: 40, right: 10, bottom: 20, left: 10},
+                    width = 960 - margin.left - margin.right,
+                    height = 500 - margin.top - margin.bottom;
 
-            var c = d3.scale.category20c();
+            var x = d3.scale.ordinal()
+                    .domain([1998,1999,2000,2001,2002,2003,2004,
+                        2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015])
+                    .rangeRoundBands([0, width], .08);
 
-            var x = d3.scale.linear()
-                    .range([0, width]);
+            var y = d3.scale.linear()
+                    .domain([0, yStackMax])
+                    .range([height, 0]);
+
+            var color = d3.scale.linear()
+                    .domain([0, n - 1])
+                    .range(["#aad", "#556"]);
 
             var xAxis = d3.svg.axis()
                     .scale(x)
-                    .orient("top");
-
-            var formatYears = d3.format("0000");
-            xAxis.tickFormat(formatYears);
+                    .tickSize(0)
+                    .tickPadding(6)
+                    .orient("bottom");
 
             var svg = d3.select("body").append("svg")
                     .attr("width", width + margin.left + margin.right)
                     .attr("height", height + margin.top + margin.bottom)
-                    .style("margin-left", margin.left + "px")
                     .append("g")
                     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-            x.domain([start_year, end_year]);
-            var xScale = d3.scale.linear()
-                    .domain([start_year, end_year])
-                    .range([0, width]);
+            var layer = svg.selectAll(".layer")
+                    .data(layers)
+                    .enter().append("g")
+                    .attr("class", "layer")
+                    .style("fill", function(d, i) { return color(i); });
+
+            var rect = layer.selectAll("rect")
+                    .data(function(d) { return d; })
+                    .enter().append("rect")
+                    .attr("x", function(d) { return x(d.x); })
+                    .attr("y", height)
+                    .attr("width", x.rangeBand())
+                    .attr("height", 0);
+
+            rect.transition()
+                    .delay(function(d, i) { return i * 10; })
+                    .attr("y", function(d) { return y(d.y0 + d.y); })
+                    .attr("height", function(d) { return y(d.y0) - y(d.y0 + d.y); });
 
             svg.append("g")
                     .attr("class", "x axis")
-                    .attr("transform", "translate(0," + 0 + ")")
+                    .attr("transform", "translate(0," + height + ")")
                     .call(xAxis);
 
-            for (var j = 0; j < data.length; j++) {
-                var g = svg.append("g").attr("class","journal");
+            d3.selectAll("input").on("change", change);
 
-                var circles = g.selectAll("circle")
-                        .data(data[j]['games'])
-                        .enter()
-                        .append("circle");
+            var timeout = setTimeout(function() {
+                d3.select("input[value=\"grouped\"]").property("checked", true).each(change);
+            }, 2000);
 
-                var text = g.selectAll("text")
-                        .data(data[j]['games'])
-                        .enter()
-                        .append("text");
-
-                var rScale = d3.scale.linear()
-                        .domain([0, d3.max(data[j]['games'], function(d) { return d[1]; })])
-                        .range([2, 9]);
-
-                circles
-                        .attr("cx", function(d, i) { return xScale(d[0]); })
-                        .attr("cy", j*20+20)
-                        .attr("r", function(d) { return rScale(d[1]); })
-                        .style("fill", function(d) { return c(j); });
-
-                text
-                        .attr("y", j*20+25)
-                        .attr("x",function(d, i) { return xScale(d[0])-5; })
-                        .attr("class","value")
-                        .text(function(d){ return d[1]; })
-                        .style("fill", function(d) { return c(j); })
-                        .style("display","none");
-
-                g.append("text")
-                        .attr("y", j*20+25)
-                        .attr("x",width+20)
-                        .attr("class","label")
-                        .text(truncate(data[j]['genre'],30,"..."))
-                        .style("fill", function(d) { return c(j); })
-                        .on("mouseover", mouseover)
-                        .on("mouseout", mouseout);
+            function change() {
+                clearTimeout(timeout);
+                if (this.value === "grouped") transitionGrouped();
+                else transitionStacked();
             }
 
-            function mouseover(p) {
-                var g = d3.select(this).node().parentNode;
-                d3.select(g).selectAll("circle").style("display","none");
-                d3.select(g).selectAll("text.value").style("display","block");
+            function transitionGrouped() {
+                y.domain([0, yGroupMax]);
+
+                rect.transition()
+                        .duration(500)
+                        .delay(function(d, i) { return i * 10; })
+                        .attr("x", function(d, i, j) { return x(d.x) + x.rangeBand() / n * j; })
+                        .attr("width", x.rangeBand() / n)
+                        .transition()
+                        .attr("y", function(d) { return y(d.y); })
+                        .attr("height", function(d) { return height - y(d.y); });
             }
 
-            function mouseout(p) {
-                var g = d3.select(this).node().parentNode;
-                d3.select(g).selectAll("circle").style("display","block");
-                d3.select(g).selectAll("text.value").style("display","none");
+            function transitionStacked() {
+                y.domain([0, yStackMax]);
+
+                rect.transition()
+                        .duration(500)
+                        .delay(function(d, i) { return i * 10; })
+                        .attr("y", function(d) { return y(d.y0 + d.y); })
+                        .attr("height", function(d) { return y(d.y0) - y(d.y0 + d.y); })
+                        .transition()
+                        .attr("x", function(d) { return x(d.x); })
+                        .attr("width", x.rangeBand());
             }
+
         }
+        //
+
     </script>
 
 </body>
