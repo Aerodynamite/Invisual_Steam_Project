@@ -3,7 +3,7 @@
 <head>
     <title>Invisual Project</title>
 	
-	<script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+	
     <script src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
     <script src="scripts.js"></script>
 
@@ -57,6 +57,7 @@
         var notWorkingIDs = [];
         var combinedSorted = [];
 		
+        var index = 4101;
 		var jsonString = "";
 		var dataToBeStored = [];
         // EXAMPLE USAGES
@@ -119,11 +120,23 @@
             console.log("Got all IDs.");
 
             // A LOT WILL FAIL IF THERE ARE TOO MANY IDs
-//            getAllGenres();
-            getSomeGenres(1601, 1700, 1); // TODO: change back to (1, 15000, 150)
-            // 391 = fail
+//            getAllGenres();  
+			var myTimer = setInterval(function () {
+				getSomeGenres(index, index+99, 1);
+				  index = index + 100;
+		          console.log("index:" + index);
+		          if(index > 5000){ 
+		          		console.log("ended last series");
+		            	var dlurl = 'data:text/json;charset=utf8,' + encodeURIComponent(jsonString);
+		     			window.open(dlurl, '_blank');
+		     			window.focus();
+		     			clearInterval(myTimer);
+		          }
+				}, 180 * 1000);
+            //getSomeGenres(1901, 2000, 1); // TODO: change back to (1, 15000, 150) (max = 16388)
+           
         }
-
+		
         function getAllGenres() {
             console.log("Getting all Genres");
             for (var i = 0; i < IDs.length; i++) {
@@ -156,14 +169,14 @@
                     var x = [idKey, appDetails[idKey].data.release_date.date];
                     releaseDates.push(x);
                     game.releaseDate = appDetails[idKey].data.release_date.date;
-                    console.log(game);
+                    //console.log(game);
                     //console.log(JSON.stringify(game));
                     jsonString = jsonString + JSON.stringify(game);
                     console.log("id " + idKey +" stringed");
                     // store game object [DRIES]
                     dataToBeStored.push(game);
                     console.log(onGoingRequests);
-                    console.log(idsOnGoingRequests);
+                    //console.log(idsOnGoingRequests);
                 }
             } else {
 //                console.log("no success: " + idKey);
@@ -179,7 +192,8 @@
 //            document.getElementById("id01").innerHTML = htmlId01Code;
         }
 
-        function getSomeGenres(start, stop, interval) {
+        function getSomeGenres(start, stop, interval) {    
+        	console.log("start new series");
             var i = start;
             while (i <= stop && i < IDs.length) {
                 // if ID is in definedNotWorkingIDs, dont execute request
@@ -199,7 +213,6 @@
         function checkIfAllRequestsAreFinished()
         {
             var i = 0, limit = 500, busy = false;
-
             var processor = setInterval(function()
             {
                 if(!busy)
@@ -210,11 +223,11 @@
                         console.log("FINISHED");
 
                         console.log("notWorkingIDs (if not empty, add to list!");
-                        console.log(notWorkingIDs);
+                        //console.log(notWorkingIDs);
                         console.log("Genres.length = " + genres.length);
-                        console.log(genres);
+                        //console.log(genres);
                         console.log("ReleaseDates.length = " + releaseDates.length);
-                        console.log(releaseDates);
+                        //console.log(releaseDates);
 
                         // call function to start visualisation here
 						console.log("finished");
@@ -222,11 +235,11 @@
 						// jsonString.replaceAll(",",",\n");
 						// console.log(jsonString);
 						// give downloadable jsonfile
-						var dlurl = 'data:text/json;charset=utf8,' + encodeURIComponent(jsonString);
-						window.open(dlurl, '_blank');
-						window.focus();
+						//var dlurl = 'data:text/json;charset=utf8,' + encodeURIComponent(jsonString);
+						//window.open(dlurl, '_blank');
+						//window.focus();
 						
-                        combineAndSortGenresAndDates();
+                        //combineAndSortGenresAndDates();
 
                         clearInterval(processor);
                     }
