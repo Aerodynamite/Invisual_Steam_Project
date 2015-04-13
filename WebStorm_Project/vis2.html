@@ -34,6 +34,7 @@
     <form>
         <label><input type="radio" name="mode" value="grouped"> Grouped</label>
         <label><input type="radio" name="mode" value="relative"> Relative</label>
+        <label><input type="radio" name="mode" value="compare"> Compare</label>
         <label><input type="radio" name="mode" value="stacked" checked> Absolute</label>
     </form>
 
@@ -49,9 +50,11 @@
 //            console.log("JSON data");
 //   			console.log(json); // this will show the info it in firebug console
 
-   			var data = combineAndSortGenresAndDates(json);
+   			var dataQs = combineAndSortGenresAndDates(json);
 
-            visualise(data);
+            var dataYear = FromQsToYears(dataQs);
+
+            visualise(dataQs, dataYear);
 		});
 
         function combineAndSortGenresAndDates(json) {
@@ -62,6 +65,7 @@
                 var game = json[it1].genres;
                 var date = json[it1].releaseDate;
                 var date_array = date.split(" ");
+                var month = date_array[1];
                 var year = date_array[2];
 
                 for (var it2 = 0; it2 < game.length; it2++) {
@@ -69,7 +73,7 @@
                     //search the current genre in the list of the genres already counted, when found increase it's counter by 1
                     found = false;
                     for (var it3 = 0; it3 < all_genres.length && !found; it3++) {
-                        if (all_genres[it3].name.localeCompare(genre) == 0 && year == all_genres[it3].year) {
+                        if (all_genres[it3].name.localeCompare(genre) == 0 && year == all_genres[it3].year && month == all_genres[it3].month) {
                             all_genres[it3].amount++;
                             found = true;
                         }
@@ -79,6 +83,7 @@
                         all_genres.push({
                             "name":genre,
                             "amount":1,
+                            "month":month,
                             "year":year
                         });
                     }
@@ -94,6 +99,16 @@
                 // a must be equal to b
                 return 0;});
 
+            all_genres.sort(function (a, b) {
+                if (a.month > b.month) {
+                    return -1;
+                }
+                if (a.month < b.month) {
+                    return 1;
+                }
+                // a must be equal to b
+                return 0;});
+
 //            console.log("Melvin object");
 //            console.log(all_genres);
 
@@ -101,6 +116,7 @@
             var data = [];
             for (var i = 0; i < all_genres.length; i++) {
                 var genre = all_genres[i].name;
+                var month = all_genres[i].month;
                 var year = parseInt(all_genres[i].year);
                 var amount = all_genres[i].amount;
 
@@ -120,6 +136,7 @@
                             games: [
                                 {
                                     x: year,
+                                    x0: month,
                                     y: amount
                                 }
                             ],
@@ -133,8 +150,9 @@
                             if (all_genres[j].name == genre) {
                                 var newYear = parseInt(all_genres[j].year);
                                 if (!isNaN(newYear)) {
+                                    var newMonth = all_genres[j].month;
                                     var newAmount = all_genres[j].amount;
-                                    data[data.length - 1].games.push({x: newYear, y: newAmount});
+                                    data[data.length - 1].games.push({x: newYear, x0:newMonth, y: newAmount});
                                     data[data.length - 1].total += newAmount;
                                 }
                             }
@@ -154,18 +172,26 @@
                 // a must be equal to b
                 return 0;});
 
-            // sort the games of each genre from old to new
+            // sort the games of each genre from old to new using year and month
             for (var genre = 0; genre < data.length; genre++) {
                 data[genre].games.sort(function (a, b) {
                     if (a.x < b.x)
                         return -1;
                     if (a.x > b.x)
                         return 1;
+                    if(a.x == b.x) {
+                        var ma = MonthtoNum(a.x0);
+                        var mb = MonthtoNum(b.x0);
+                        if (ma < mb)
+                            return -1;
+                        if (ma > mb)
+                            return 1;
+                    }
                     return 0;
                 });
             }
 
-            // add the missing years to each genre
+            /*// add the missing years + months to each genre
             for (var genre = 0; genre < data.length; genre++) {
                 var newGames = [];
                 var prevYear = 1997;
@@ -176,6 +202,7 @@
                         // add the year to the array with a count of 0 games
                         newGames.push({
                             x: prevYear+1,
+                            x0:
                             y: 0
                         });
                     }
@@ -187,43 +214,185 @@
                     prevYear++;
                 }
                 data[genre].games = newGames;
+            }*/
+
+            //divide the months in Q's and add the missing ones
+            var dataQs = [];
+            for (var genreIt = 0; genreIt < data.length; genreIt++) {
+                var length = data[genreIt].games.length;
+                var newGames = [];
+                var prevYear = 1998;
+                var prevQ;
+
+                var yearIt = 0;
+                while (prevYear <= 2015) {
+                    prevQ = 1;
+                    while (prevQ < 5) {
+                        newGames.push({
+                            x: prevYear,
+                            q: prevQ,
+                            y: 0
+                        });
+
+                        while (yearIt < length && MonthToQ(MonthtoNum(data[genreIt].games[yearIt].x0)) == prevQ && data[genreIt].games[yearIt].x == prevYear) {
+                            newGames[(prevQ-1) + (prevYear-1998)*4].y += data[genreIt].games[yearIt].y;
+                            yearIt++;
+                        }
+                        prevQ++;
+                    }
+                    prevYear++;
+                }
+                dataQs.push({
+                    games: newGames,
+                    total: data[genreIt].total,
+                    genre: data[genreIt].genre
+                });
             }
 
             console.log("My object");
             console.log(data);
+            console.log("Data Q's");
+            console.log(dataQs);
 
-            return data;
+            return dataQs;
+        }
+
+        function FromQsToYears(dataQs) {
+            //simplify the data (filter out the months)
+            var dataYears = [];
+
+            for (var genreIt = 0; genreIt < dataQs.length; genreIt++) {
+                var newGames = [];
+                var prevYear = 1998;
+
+                var yearIt = 0;
+                while (prevYear <= 2015) {
+                    newGames.push({
+                        x: prevYear,
+                        y: 0
+                    });
+
+                    var prevQ = 1;
+                    while (prevQ < 5) {
+                        newGames[yearIt].y += dataQs[genreIt].games[yearIt * 4 + (prevQ - 1)].y;
+                        prevQ++;
+                    }
+                    yearIt++;
+                    prevYear++;
+                }
+                dataYears.push({
+                    games: newGames,
+                    total: dataQs[genreIt].total,
+                    genre: dataQs[genreIt].genre
+                });
+            }
+
+            console.log("dataYears");
+            console.log(dataYears);
+
+            return dataYears;
+        }
+
+
+        /**
+         * @return {number}
+         */
+        function MonthtoNum(name) {
+            var n;
+            var numMonth = 1;
+            n = name.localeCompare("Jan,")
+            if(n == 0)
+                return numMonth;
+            numMonth++;
+            n = name.localeCompare("Feb,")
+            if(n == 0)
+                return numMonth;
+            numMonth++;
+            n = name.localeCompare("Mar,")
+            if(n == 0)
+                return numMonth;
+            numMonth++;
+            n = name.localeCompare("Apr,")
+            if(n == 0)
+                return numMonth;
+            numMonth++;
+            n = name.localeCompare("May,")
+            if(n == 0)
+                return numMonth;
+            numMonth++;
+            n = name.localeCompare("Jun,")
+            if(n == 0)
+                return numMonth;
+            numMonth++;
+            n = name.localeCompare("Jul,")
+            if(n == 0)
+                return numMonth;
+            numMonth++;
+            n = name.localeCompare("Aug,")
+            if(n == 0)
+                return numMonth;
+            numMonth++;
+            n = name.localeCompare("Sep,")
+            if(n == 0)
+                return numMonth;
+            numMonth++;
+            n = name.localeCompare("Oct,")
+            if(n == 0)
+                return numMonth;
+            numMonth++;
+            n = name.localeCompare("Nov,")
+            if(n == 0)
+                return numMonth;
+            numMonth++;
+            n = name.localeCompare("Dec,")
+            if(n == 0)
+                return numMonth;
+        }
+
+        function MonthToQ(x) {
+            return (((x-1) - (x-1)%3) / 3)+1
         }
 
         //////////////// VISUALIZATION
-        function visualise(data) {
+        function visualise(dataQs, dataYear) {
             var n = 5, // number of layers (= # genres)
                 m = 18, // number of samples per layer (= # years)
                 stack = d3.layout.stack(),
-                genreCounter = 0,
-                layers = stack(d3.range(n).map(function() {
+                genreCounter = 0;
+            var layersYear = stack(d3.range(n).map(function() {
 //                    console.log(temp);
-                    var ret = data[genreCounter].games;
-                    genreCounter = genreCounter + 1;
+                        var ret = dataYear[genreCounter].games;
+                        genreCounter = genreCounter + 1;
 //                    console.log(ret);
-                    return ret;
-                })),
-                yGroupMax = d3.max(layers, function(layer) { return d3.max(layer, function(d) { return d.y; }); }),
-                yRelativeMax = 100,
-                yStackMax = d3.max(layers, function(layer) { return d3.max(layer, function(d) { return d.y0 + d.y; }); });
-            console.log(layers);
+                        return ret;
+                    }));
 
-            amountGamesYear = [];
-            amountYear = data[0].games.length;
+            genreCounter = 0;
+            var layersQ = stack(d3.range(n).map(function() {
+                        var ret = dataQs[genreCounter].games;
+                        genreCounter = genreCounter + 1;
+                        return ret;
+                    }));
+
+            var yGroupMaxYear = d3.max(layersYear, function(layer) { return d3.max(layer, function(d) { return d.y; }); });
+            var yRelativeMax = 100;
+            var yStackMaxYear = d3.max(layersYear, function(layer) { return d3.max(layer, function(d) { return d.y0 + d.y; }); });
+            console.log("layersYear");
+            console.log(layersYear);
+            console.log("layersQ");
+            console.log(layersQ);
+
+            var amountGamesYear = [];
+            var amountYear = dataYear[0].games.length;
             var it = 0;
             while(it < amountYear){
                 amountGamesYear.push(0.00000000000000000001);
                 it++;
             }
 
-            for(var it1 in layers) {
-                for(var it2 in layers[it1])
-                    amountGamesYear[it2] = amountGamesYear[it2] + layers[it1][it2].y;
+            for(var it1 in layersYear) {
+                for(var it2 in layersYear[it1])
+                    amountGamesYear[it2] = amountGamesYear[it2] + layersYear[it1][it2].y;
             }
 
             console.log(amountGamesYear);
@@ -238,7 +407,7 @@
                     .rangeRoundBands([0, width], .08);
 
             var y = d3.scale.linear()
-                    .domain([0, yStackMax])
+                    .domain([0, yStackMaxYear])
                     .range([height, 0]);
 
             var colorArray = ["#538ed5", "#953735", "#e46d0a", "#75923c", "#b2a1c7", "#dc143c", "#87cefa", "#90ee90", "#add8e6", "#d3d3d3", "#cf1256", "#12cf5e"];
@@ -263,7 +432,7 @@
                     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
             var layer = svg.selectAll(".layer")
-                    .data(layers)
+                    .data(layersYear)
                     .enter().append("g")
                     .attr("class", "layer")
                     .style("fill", function(d, i) { return color(i); });
@@ -296,6 +465,7 @@
                 clearTimeout(timeout);
                 if (this.value === "grouped") transitionGrouped();
                 else if(this.value == "relative") transitionRelative();
+                else if(this.value == "compare") transitionLineGraph();
                 else transitionStacked();
             }
 
@@ -312,8 +482,40 @@
                         .attr("width", x.rangeBand());
             }
 
+            function transitionLineGraph() {
+                /*var line = d3.svg.line()
+                        .x(function(d) { return x(d.date); })
+                        .y(function(d) { return y(d.close); });*/
+
+                console.log("data in line");
+                console.log(layer);
+
+                x.domain(d3.extent(dataYear, function(d) { return d.date; }));
+                y.domain(d3.extent(dataYear, function(d) { return d.close; }));
+
+                svg.append("g")
+                        .attr("class", "x axis")
+                        .attr("transform", "translate(0," + height + ")")
+                        .call(xAxis);
+
+                svg.append("g")
+                        .attr("class", "y axis")
+                        .call(yAxis)
+                        .append("text")
+                        .attr("transform", "rotate(-90)")
+                        .attr("y", 6)
+                        .attr("dy", ".71em")
+                        .style("text-anchor", "end")
+                        .text("Price ($)");
+
+                svg.append("path")
+                        .datum(dataYear)
+                        .attr("class", "line")
+                        .attr("d", line);
+            }
+
             function transitionGrouped() {
-                y.domain([0, yGroupMax]);
+                y.domain([0, yGroupMaxYear]);
 
                 rect.transition()
                         .duration(500)
@@ -326,7 +528,7 @@
             }
 
             function transitionStacked() {
-                y.domain([0, yStackMax]);
+                y.domain([0, yStackMaxYear]);
 
                 rect.transition()
                         .duration(500)
