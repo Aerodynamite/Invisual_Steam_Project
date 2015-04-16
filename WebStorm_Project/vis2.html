@@ -55,7 +55,7 @@
 <div id="id01"></div>
 
     <script>
-    	$.getJSON("data1-1600.json", function(json) {
+    	$.getJSON("data1-16387.json", function(json) {
 //            console.log("JSON data");
 //   			console.log(json); // this will show the info it in firebug console
 
@@ -234,6 +234,9 @@
                 var prevQ;
 
                 var yearIt = 0;
+                //because we skip a couple of years in the graph we also need to skip a couple of years in the games array
+                while(yearIt < length && data[genreIt].games[yearIt].x < 2005)yearIt++;
+
                 while (prevYear <= 2015) {
                     prevQ = 1;
                     while (prevQ < 5) {
@@ -258,7 +261,7 @@
                 });
             }
 
-/*            console.log("My object");
+/*            console.log("Data");
             console.log(data);
             console.log("Data Q's");
             console.log(dataQs);*/
@@ -364,6 +367,10 @@
 
         //////////////// VISUALIZATION
         function visualise(dataQs, dataYear) {
+/*            console.log("dataQs");
+            console.log(dataQs);
+            console.log("dataYear");
+            console.log(dataYear);*/
             var n = 5, // number of layers (= # genres)
                 m = 18, // number of samples per layer (= # years)
                 stack = d3.layout.stack(),
