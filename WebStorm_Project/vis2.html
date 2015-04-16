@@ -55,7 +55,7 @@
 <div id="id01"></div>
 
     <script>
-    	$.getJSON("data1-16387.json", function(json) {
+    	$.getJSON("data1-1600.json", function(json) {
 //            console.log("JSON data");
 //   			console.log(json); // this will show the info it in firebug console
 
@@ -505,10 +505,29 @@
 
 //----------------------------------------------------------
 
+//----------------------text maken--------------------------
+            var maxSizeText = 70;
+
+            var text = layer.selectAll("text")
+                    .data(function(d) { return d; })
+                    .enter()
+                    .append("text")
+                    .attr("x", function(d) { return x(d.x) + x.rangeBand()/2-(maxSizeText * d.y/yStackMaxYear)/2;})
+                    .attr("y", height)
+                    .text(function(d) { return d.y })
+                    .style("font-size", function(d) {return maxSizeText * d.y/yStackMaxYear + "px"})
+                    .attr("fill", "black");
+
+//----------------------------------------------------------
+
             rect.transition()
                     .delay(function(d, i) { return i * 10; })
                     .attr("y", function(d) { return y(d.y0 + d.y); })
                     .attr("height", function(d) { return y(d.y0) - y(d.y0 + d.y); });
+
+            text.transition()
+                    .delay(function(d, i) { return i * 10; })
+                    .attr("y", function(d) { return y(d.y0 + d.y)+(y(d.y0) - y(d.y0 + d.y))/2 + (maxSizeText * d.y/yStackMaxYear)/2; });
 
             svg.append("g")
                     .attr("class", "x axis")
@@ -551,9 +570,24 @@
                         .transition()
                         .attr("x", function(d) { return x(d.x); })
                         .attr("width", x.rangeBand());
+
+                var maxSizeTextRel = 20;
+
+                text.transition().duration(400)
+                        .delay(function(d, i) { return i * 10; })
+                        .attr("x", function(d, i) { return x(d.x) + x.rangeBand()/2-(maxSizeTextRel * (y(d.y0/amountGamesYear[i]*100) - y((d.y0 + d.y)/amountGamesYear[i]*100))/100)/2;})
+                        .attr("y", function(d, i) { return (y(d.y0/amountGamesYear[i]*100) - y((d.y0 + d.y)/amountGamesYear[i]*100))/2 + y((d.y0 + d.y)/amountGamesYear[i]*100) + (maxSizeText * d.y/yRelativeMax)/2; })
+                        .transition()
+                        .duration(400)
+                        .style("font-size", function(d,i) {return maxSizeTextRel * (y(d.y0/amountGamesYear[i]*100) - y((d.y0 + d.y)/amountGamesYear[i]*100))/100 + "px"});
             }
 
             function transitionLineGraph() {
+                text.transition()
+                        .duration(400)
+                        .attr("y", height)
+                        .style("font-size", function() {return 0 + "px"});
+
                 rect.transition()
                         .duration(300)
                         .delay(function(d, i) { return i * 10; })
@@ -578,14 +612,26 @@
                 }
                 newYAxis(yGroupMaxYear);
 
+                var widthbar = x.rangeBand() / n;
+
                 rect.transition()
                         .duration(600)
                         .delay(function(d, i) { return i * 10; })
                         .attr("x", function(d, i, j) { return x(d.x) + x.rangeBand() / n * j; })
-                        .attr("width", x.rangeBand() / n)
+                        .attr("width", widthbar)
                         .transition()
                         .attr("y", function(d) { return y(d.y); })
                         .attr("height", function(d) { return height - y(d.y); });
+
+                var sizeText = widthbar-2;
+
+                text.transition()
+                        .duration(400)
+                        .delay(function(d, i) { return i * 10; })
+                        .attr("x", function(d, i, j) { return x(d.x) + x.rangeBand() / n * j + widthbar/2 - sizeText/2;})
+                        .attr("y", function(d) { return y(d.y)-4 })
+                        .transition().duration(400)
+                        .style("font-size", function() {return sizeText + "px"})
             }
 
             function transitionStacked() {
@@ -603,6 +649,15 @@
                         .transition()
                         .attr("x", function(d) { return x(d.x); })
                         .attr("width", x.rangeBand());
+
+                text.transition().duration(400)
+                        .delay(function(d, i) { return i * 10; })
+                        .attr("x", function(d) { return x(d.x) + x.rangeBand()/2-(maxSizeText * d.y/yStackMaxYear)/2;})
+                        .attr("y", function(d) { return y(d.y0 + d.y)+(y(d.y0) - y(d.y0 + d.y))/2 + (maxSizeText * d.y/yStackMaxYear)/2; })
+                        .transition()
+                        .duration(400)
+                        .style("font-size", function(d) {return maxSizeText * d.y/yStackMaxYear + "px"});
+
             }
 
             function linesinX(){
