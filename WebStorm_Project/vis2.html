@@ -40,7 +40,7 @@
 
         /*Legend*/
         .legend {
-            font-size: 70px;
+            font-size: 14px; /* doet niks blijkbaar ma kweni waarom #goeieTutorial */
         }
         rect {
             stroke-width: 2;
@@ -51,8 +51,8 @@
 
 <form>
     <label><input type="radio" name="mode" value="grouped"> Grouped</label>
-    <label><input type="radio" name="mode" value="relative"> Relative</label>
-    <label><input type="radio" name="mode" value="stacked" checked> Absolute</label>
+    <label><input type="radio" name="mode" value="relative"> Stacked (relative) </label>
+    <label><input type="radio" name="mode" value="stacked" checked> Stacked (absolute)</label>
     <label><input type="radio" name="mode" value="compare"> Compare</label>
 </form>
 
@@ -384,212 +384,318 @@
 
         //////////////// VISUALIZATION
         function visualise(dataQs, dataYear, genres) {
-/*            console.log("dataQs");
+            /*console.log("dataQs");
             console.log(dataQs);
             console.log("dataYear");
             console.log(dataYear);*/
-            var n = 5, // number of layers (= # genres)
-                m = 18, // number of samples per layer (= # years)
-                stack = d3.layout.stack(),
-                genreCounter = 0;
-            var layersYear = stack(d3.range(n).map(function() {
-//                    console.log(temp);
-                        var ret = dataYear[genreCounter].games;
-                        genreCounter = genreCounter + 1;
-//                    console.log(ret);
-                        return ret;
-                    }));
-            //boolean to check if we need to make a transition from line- to barchart
-            var wasLine = false;
 
-            genreCounter = 0;
-            var layersQ = stack(d3.range(n).map(function() {
-                        var ret = dataQs[genreCounter].games;
-                        genreCounter = genreCounter + 1;
-                        return ret;
-                    }));
+//--------------------------- General visualisation stuff -------------------------
+            // Variables
+            // brackets zodat ik die hoop hier kan toeklappen in mijn IDE :P sorry als het u stoort
+            {
+                // General
+                var margin = {top: 40, right: 100, bottom: 20, left: 50},
+                        width = 1024 - margin.left - margin.right,
+                        height = 500 - margin.top - margin.bottom;
 
-            var yGroupMaxYear = d3.max(layersYear, function(layer) { return d3.max(layer, function(d) { return d.y; }); });
-            var yRelativeMax = 100;
-            var yStackMaxYear = d3.max(layersYear, function(layer) { return d3.max(layer, function(d) { return d.y0 + d.y; }); });
-            var yCompareMax = d3.max(layersQ, function(layersQ) {return d3.max(layersQ, function(d) {return d.y; }); });
+                var colorArray = ["#538ed5", "#953735", "#e46d0a", "#75923c", "#b2a1c7", "#dc143c", "#87cefa",
+                    "#90ee90", "#add8e6", "#d3d3d3", "#cf1256", "#12cf5e"];
+
+                var color = d3.scale.ordinal()
+                        .range(colorArray);
+
+                // d3 horizontal and vertical scale variables
+                var x = 0,
+                        y = 0,
+                        xAxis = 0,
+                        yAxis = 0,
+                        gy = 0;
+
+                // General svg
+                var svg = d3.select("body").append("svg")
+                                .attr("width", width + margin.left + margin.right)
+                                .attr("height", height + margin.top + margin.bottom)
+                                .append("g")
+                                .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+                // Bars general
+                var layer = 0,
+                        rect = 0;
+
+                // Bars quantity number text
+                var barNumbersText = 0,
+                        maxSizeText = 70;
+
+                // Grouped
+                var yGroupMaxYear = 0;
+
+                // General stacked
+                var wasLine = false,
+                        layersYear = 0,
+                        amountGamesYear = [],
+                        n = 5; // amount of stacked layers
+
+                // Relative stacked
+                var yRelativeMax = 0;
+
+                // Absolute stacked
+                var yStackMaxYear = 0;
+
+                // Compare
+                var line,
+                        lines,
+                        lineinX,
+                        yCompareMax = 0,
+                        layersQ = 0;
+            }
+
+            // Functions
+            function xSetYearDomain() {
+                x = d3.scale.ordinal()
+                        .domain([2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015])
+                        .rangeRoundBands([0, width], .08);
+            }
+
+            function ySetStackedDomain() {
+                y = d3.scale.linear()
+                        .domain([0, yStackMaxYear])
+                        .range([height, 0]);
+            }
+
+//--------------------------- Stacked view  -------------------------
+            function updateStacked(data) {
+                var stack = d3.layout.stack(),
+                    genreCounter = 0;
+
+                layersYear = stack(d3.range(n).map(function () {
+                    var ret = data[genreCounter].games;
+                    genreCounter = genreCounter + 1;
+                    return ret;
+                }));
+                //boolean to check if we need to make a transition from line- to barchart
+                wasLine = false;
+
+                yStackMaxYear = d3.max(layersYear, function(layer) { return d3.max( layer, function(d) { return d.y0 + d.y; }); });
+
+                xSetYearDomain();
+                ySetStackedDomain();
+            }
+
+            updateStacked(dataYear.slice(0, n));
+
+//--------------------------- Relative view  -------------------------
+            function updateRelative(data) {
+
+//                fuckthisshit();
+
+                amountGamesYear = [];
+                var amountYear = data[0].games.length;
+                var it = 0;
+                while (it < amountYear){
+                    amountGamesYear.push(0.00000000000000000001);
+                    it++;
+                }
+
+                for(var it1 in layersYear) {
+                    for(var it2 in layersYear[it1])
+                        amountGamesYear[it2] = amountGamesYear[it2] + layersYear[it1][it2].y;
+                }
+
+                xSetYearDomain();
+                yRelativeMax = 100; // y domain
+                //            console.log(amountGamesYear);
+            }
+
+            updateRelative(dataYear.slice(0, n));
+
+//--------------------------- Init lines  -------------------------
+            // ik zou dit in het begin van de updateLines functie willen zetten maar om de een of andere
+            // mysterieuze reden werkt dat niet dan.
+            function initCompare() {
+                var genreCounter = 0,
+                        stack = d3.layout.stack();
+
+                layersQ = stack(d3.range(n).map(function () {
+                    var ret = dataQs[genreCounter].games;
+                    genreCounter = genreCounter + 1;
+                    return ret;
+                }));
+
+                yCompareMax = d3.max(layersQ, function(layersQ) {return d3.max( layersQ,function(d) {return d.y; }); });
+            }
+
+            initCompare();
+
+//--------------------------- General visualisation stuff 2  --------
 
             /*
-            console.log("layersYear");
-            console.log(layersYear);
-            console.log("layersQ");
-            console.log(layersQ);
-            */
+             console.log("layersYear");
+             console.log(layersYear);
+             console.log("layersQ");
+             console.log(layersQ);
+             */
 
-            var amountGamesYear = [];
-            var amountYear = dataYear[0].games.length;
-            var it = 0;
-            while(it < amountYear){
-                amountGamesYear.push(0.00000000000000000001);
-                it++;
+
+            function updateView() {
+                xAxis = d3.svg.axis()
+                        .scale(x)
+                        .tickSize(0)
+                        .tickPadding(6)
+                        .orient("bottom");
+
+                yAxis = d3.svg.axis()
+                        .scale(y)
+                        .tickSize(-width)
+                        .tickPadding(2)
+                        .orient("left");
+
+                layer = svg.selectAll(".layer")
+                        .data(layersYear)
+                        .enter().append("g")
+                        .attr("class", "layer")
+                        .style("fill", function(d, i) { return color(i); });
+
+                rect = layer.selectAll("rect")
+                        .data(function(d) { return d; })
+                        .enter().append("rect")
+                        .attr("x", function(d) { return x(d.x); })
+                        .attr("y", height)
+                        .attr("width", x.rangeBand())
+                        .attr("height", 0);
+
+                svg.append("g")
+                        .attr("class", "x axis")
+                        .attr("transform", "translate(0," + height + ")")
+                        .call(xAxis);
+
+                gy = svg.append("g")
+                        .attr("class", "y axis")
+                        .call(yAxis);
+
+                makeAxisMinor();
             }
 
-            for(var it1 in layersYear) {
-                for(var it2 in layersYear[it1])
-                    amountGamesYear[it2] = amountGamesYear[it2] + layersYear[it1][it2].y;
+            updateView();
+
+//---------------------- Getallen in bars zetten --------------------------
+            function updateBarNumbers() {
+                barNumbersText = layer.selectAll("text")
+                        .data(function(d) { return d; })
+                        .enter()
+                        .append("text")
+                        .attr("x", function(d) { return x(d.x) + x.rangeBand()/2-(maxSizeText * d.y/yStackMaxYear)/2;})
+                        .attr("y", height)
+                        .text(function(d) { return d.y })
+                        .style("font-size", function(d) {return maxSizeText * d.y/yStackMaxYear + "px"})
+                        .attr("fill", "black");
+                rect.transition()
+                        .delay(function(d, i) { return i * 10; })
+                        .attr("y", function(d) { return y(d.y0 + d.y); })
+                        .attr("height", function(d) { return y(d.y0) - y(d.y0 + d.y); });
+
+                barNumbersText.transition()
+                        .delay(function(d, i) { return i * 10; })
+                        .attr("y", function(d) { return y(d.y0 + d.y)+(y(d.y0) - y(d.y0 + d.y))/2 + (maxSizeText * d.y/yStackMaxYear)/2; });
             }
 
-//            console.log(amountGamesYear);
-
-            var margin = {top: 40, right: 100, bottom: 20, left: 50},
-                    width = 1024 - margin.left - margin.right,
-                    height = 500 - margin.top - margin.bottom;
-
-            var x = d3.scale.ordinal()
-                    .domain([2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015])
-                    .rangeRoundBands([0, width], .08);
-
-            var y = d3.scale.linear()
-                    .domain([0, yStackMaxYear])
-                    .range([height, 0]);
-
-            var xq = d3.scale.ordinal()
-                    .domain([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44])
-                    .rangeRoundBands([0, width], .08);
-
-
-            var colorArray = ["#538ed5", "#953735", "#e46d0a", "#75923c", "#b2a1c7", "#dc143c", "#87cefa",
-                "#90ee90", "#add8e6", "#d3d3d3", "#cf1256", "#12cf5e"];
-
-            var color = d3.scale.ordinal()
-                    .range(colorArray);
-
-//            var color = d3.scale.linear()
-//                    .domain([0, n - 1])
-//                    .range(["#aad", "#556"]);
-
-            var xAxis = d3.svg.axis()
-                    .scale(x)
-                    .tickSize(0)
-                    .tickPadding(6)
-                    .orient("bottom");
-
-            var yAxis = d3.svg.axis()
-                    .scale(y)
-                    //.ticks(5)
-                    //.tickFormat(formatAmount)
-                    .tickSize(-width)
-                    .tickPadding(2)
-                    .orient("left");
-
-            var svg = d3.select("body").append("svg")
-                    .attr("width", width + margin.left + margin.right)
-                    .attr("height", height + margin.top + margin.bottom)
-                    .append("g")
-                    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
-            var layer = svg.selectAll(".layer")
-                    .data(layersYear)
-                    .enter().append("g")
-                    .attr("class", "layer")
-                    .style("fill", function(d, i) { return color(i); });
-
-            var rect = layer.selectAll("rect")
-                    .data(function(d) { return d; })
-                    .enter().append("rect")
-                    .attr("x", function(d) { return x(d.x); })
-                    .attr("y", height)
-                    .attr("width", x.rangeBand())
-                    .attr("height", 0);
-
-//---------------------------lines aanmaken-------------------------
-
-
-            var city = svg.selectAll(".city")
-                    .data(layersQ)
-                    .enter().append("g")
-                    .attr("class", "city");
-
-
-            var line = d3.svg.line()
-                    .interpolate("basis")
-                    .x(function(d) { return xq(d.q + (d.x-2005) * 4); })
-                    .y(function(d) { return y(d.y); });
-
-            var lineinX = d3.svg.line()
-                    .interpolate("basis")
-                    .x(function(d) { return xq(d.q + (d.x-2005) * 4); })
-                    .y(function() { return height; });
-
-            var lines = city.append("path")
-                    .attr("class", "line")
-                    .attr("d", function(d) { return lineinX(d); })
-                    .attr("stroke", function(d, i) { return color(i); })
-                    .attr("stroke-width", 0)
-                    .attr("fill", "none");
-
-
-//----------------------------------------------------------
-
-//----------------------text maken--------------------------
-            var maxSizeText = 70;
-
-            var text = layer.selectAll("text")
-                    .data(function(d) { return d; })
-                    .enter()
-                    .append("text")
-                    .attr("x", function(d) { return x(d.x) + x.rangeBand()/2-(maxSizeText * d.y/yStackMaxYear)/2;})
-                    .attr("y", height)
-                    .text(function(d) { return d.y })
-                    .style("font-size", function(d) {return maxSizeText * d.y/yStackMaxYear + "px"})
-                    .attr("fill", "black");
-
-//----------------------------------------------------------
+            updateBarNumbers();
 
 //----------------------legende maken-----------------------
+            function updateLegend(data) {
+                var legendRectSize = 18;    // size of colored square
+                var legendSpacing = 4;      // spacing between entries
 
-            var legendRectSize = 18;
-            var legendSpacing = 4;
+                // create legend svg
+                var legend = svg.selectAll('.legend')
+                        .data(color.domain())
+                        .enter()
+                        .append('g')
+                        .attr('class', 'legend')
+                        .attr('transform', function (d, i) {
+                            var height = legendRectSize + legendSpacing;
+                            var horz = width + 10;
+                            var vert = i * height - 0;
+                            return 'translate(' + horz + ',' + vert + ')';
+                        });
 
-            var legend = svg.selectAll('.legend')
-                    .data(color.domain())
-                    .enter()
-                    .append('g')
-                    .attr('class', 'legend')
-                    .attr('transform', function(d, i) {
-                        var height = legendRectSize + legendSpacing;
-                        var horz = width + 10;
-                        var vert = i * height - 0;
-                        return 'translate(' + horz + ',' + vert + ')';
-                    });
+                // add the colored squares
+                legend.append('rect')
+                        .attr('width', legendRectSize)
+                        .attr('height', legendRectSize)
+                        .style('fill', color)
+                        .style('stroke', color)
+                        .on("click", legendClick);
 
-            legend.append('rect')
-                    .attr('width', legendRectSize)
-                    .attr('height', legendRectSize)
-                    .style('fill', color)
-                    .style('stroke', color);
+                // add the text of each entry
+                legend.append('text')
+                        .attr('x', legendRectSize + legendSpacing)
+                        .attr('y', legendRectSize - legendSpacing)
+                        .text(function (d) {
+                            return data[d];
+                        });
+            }
 
-            legend.append('text')
-                    .attr('x', legendRectSize + legendSpacing)
-                    .attr('y', legendRectSize - legendSpacing)
-                    .text(function(d) { return genres[d]; });
+            updateLegend(genres);
 
-//----------------------------------------------------------
+            function legendClick(i) {
+                console.log(i); // outputs the index of the clicked legend item. (top = 0, bottom = n)
 
-            rect.transition()
-                    .delay(function(d, i) { return i * 10; })
-                    .attr("y", function(d) { return y(d.y0 + d.y); })
-                    .attr("height", function(d) { return y(d.y0) - y(d.y0 + d.y); });
+                // TEST CODE
+                var newDataYear = dataYear;
+                // switch element 0 and i
+                var temp = dataYear[i];
+                newDataYear[i] = newDataYear[0];
+                newDataYear[0] = temp;
+                updateRelative(newDataYear);
+                updateView();
+            }
 
-            text.transition()
-                    .delay(function(d, i) { return i * 10; })
-                    .attr("y", function(d) { return y(d.y0 + d.y)+(y(d.y0) - y(d.y0 + d.y))/2 + (maxSizeText * d.y/yStackMaxYear)/2; });
+//--------------------------- Compare lines aanmaken -------------------------
+            function updateCompare(data) {
 
-            svg.append("g")
-                    .attr("class", "x axis")
-                    .attr("transform", "translate(0," + height + ")")
-                    .call(xAxis);
+                var xq = d3.scale.ordinal()
+                        .domain([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44])
+                        .rangeRoundBands([0, width], .08);
 
-            var gy = svg.append("g")
-                    .attr("class", "y axis")
-                    .call(yAxis);
+                var city = svg.selectAll(".city")
+                        .data(data)
+                        .enter().append("g")
+                        .attr("class", "city");
 
-            makeAxisMinor();
+
+                line = d3.svg.line()
+                        .interpolate("basis")
+                        .x(function (d) {
+                            return xq(d.q + (d.x - 2005) * 4);
+                        })
+                        .y(function (d) {
+                            return y(d.y);
+                        });
+
+                lineinX = d3.svg.line()
+                        .interpolate("basis")
+                        .x(function (d) {
+                            return xq(d.q + (d.x - 2005) * 4);
+                        })
+                        .y(function () {
+                            return height;
+                        });
+
+                lines = city.append("path")
+                        .attr("class", "line")
+                        .attr("d", function (d) {
+                            return lineinX(d);
+                        })
+                        .attr("stroke", function (d, i) {
+                            return color(i);
+                        })
+                        .attr("stroke-width", 0)
+                        .attr("fill", "none");
+            }
+
+            updateCompare(layersQ);
+
+//--------------------------- update transition shizzle ------------------------------
 
             d3.selectAll("input").on("change", change);
 
@@ -624,7 +730,7 @@
 
                 var maxSizeTextRel = 20;
 
-                text.transition().duration(400)
+                barNumbersText.transition().duration(400)
                         .delay(function(d, i) { return i * 10; })
                         .attr("x", function(d, i) { return x(d.x) + x.rangeBand()/2-(maxSizeTextRel * (y(d.y0/amountGamesYear[i]*100) - y((d.y0 + d.y)/amountGamesYear[i]*100))/100)/2;})
                         .attr("y", function(d, i) { return (y(d.y0/amountGamesYear[i]*100) - y((d.y0 + d.y)/amountGamesYear[i]*100))/2 + y((d.y0 + d.y)/amountGamesYear[i]*100) + (maxSizeText * d.y/yRelativeMax)/2; })
@@ -634,7 +740,7 @@
             }
 
             function transitionLineGraph() {
-                text.transition()
+                barNumbersText.transition()
                         .duration(400)
                         .attr("y", height)
                         .style("font-size", function() {return 0 + "px"});
@@ -661,7 +767,12 @@
                     linesinX();
                     wasLine = false;
                 }
+
+                yGroupMaxYear = d3.max(layersYear, function(layer) { return d3.max( layer, function(d) { return d.y; }); });
+
                 newYAxis(yGroupMaxYear);
+
+                var n = layersYear.length;
 
                 var widthbar = x.rangeBand() / n;
 
@@ -676,7 +787,7 @@
 
                 var sizeText = widthbar-2;
 
-                text.transition()
+                barNumbersText.transition()
                         .duration(400)
                         .delay(function(d, i) { return i * 10; })
                         .attr("x", function(d, i, j) { return x(d.x) + x.rangeBand() / n * j + widthbar/2 - sizeText/2;})
@@ -701,7 +812,7 @@
                         .attr("x", function(d) { return x(d.x); })
                         .attr("width", x.rangeBand());
 
-                text.transition().duration(400)
+                barNumbersText.transition().duration(400)
                         .delay(function(d, i) { return i * 10; })
                         .attr("x", function(d) { return x(d.x) + x.rangeBand()/2-(maxSizeText * d.y/yStackMaxYear)/2;})
                         .attr("y", function(d) { return y(d.y0 + d.y)+(y(d.y0) - y(d.y0 + d.y))/2 + (maxSizeText * d.y/yStackMaxYear)/2; })
@@ -740,6 +851,7 @@
                 gy.selectAll("g").filter(function(d) { return d; })
                         .classed("minor", true);
             }
+
         }
         //
 
