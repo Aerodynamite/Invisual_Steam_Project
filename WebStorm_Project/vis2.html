@@ -387,7 +387,9 @@
             /*console.log("dataQs");
             console.log(dataQs);
             console.log("dataYear");
-            console.log(dataYear);*/
+            console.log(dataYear);
+            console.log("genres");
+            console.log(genres);*/
 
 //--------------------------- General visualisation stuff -------------------------
             // Variables
@@ -462,16 +464,39 @@
                         .range([height, 0]);
             }
 
-//--------------------------- Stacked view  -------------------------
-            function updateStacked(data) {
+            // Update the layer stack for the stacked bar charts according to the new data
+            function updateLayerStack(data) {
                 var stack = d3.layout.stack(),
-                    genreCounter = 0;
+                        genreCounter = 0;
 
                 layersYear = stack(d3.range(n).map(function () {
                     var ret = data[genreCounter].games;
                     genreCounter = genreCounter + 1;
                     return ret;
                 }));
+            }
+
+//--------------------------- Grouped view  -------------------------
+            function initGrouped(data) {
+                updateLayerStack(data);
+
+                yGroupMaxYear = d3.max(layersYear, function(layer) { return d3.max( layer, function(d) { return d.y; }); });
+                xSetYearDomain();
+                ySetStackedDomain();
+            }
+
+            initGrouped(dataYear.slice(0, n));
+
+            function updateGrouped(data) {
+                initGrouped(data);
+
+                transitionGrouped();
+            }
+
+//--------------------------- Stacked view  -------------------------
+            function initStacked(data) {
+                updateLayerStack(data);
+
                 //boolean to check if we need to make a transition from line- to barchart
                 wasLine = false;
 
@@ -481,12 +506,17 @@
                 ySetStackedDomain();
             }
 
-            updateStacked(dataYear.slice(0, n));
+            initStacked(dataYear.slice(0, n));
+
+            function updateStacked(data) {
+                initStacked(data);
+
+                transitionStacked();
+            }
 
 //--------------------------- Relative view  -------------------------
-            function updateRelative(data) {
-
-//                fuckthisshit();
+            function initRelative(data) {
+                updateLayerStack(data);
 
                 amountGamesYear = [];
                 var amountYear = data[0].games.length;
@@ -503,10 +533,15 @@
 
                 xSetYearDomain();
                 yRelativeMax = 100; // y domain
-                //            console.log(amountGamesYear);
             }
 
-            updateRelative(dataYear.slice(0, n));
+            initRelative(dataYear.slice(0, n));
+
+            function updateRelative(data) {
+                initRelative(data);
+
+                transitionRelative();
+            }
 
 //--------------------------- Init lines  -------------------------
             // ik zou dit in het begin van de updateLines functie willen zetten maar om de een of andere
@@ -526,6 +561,10 @@
 
             initCompare();
 
+            function updateCompare() {
+                // TODO
+            }
+
 //--------------------------- General visualisation stuff 2  --------
 
             /*
@@ -535,8 +574,7 @@
              console.log(layersQ);
              */
 
-
-            function updateView() {
+            function initView() {
                 xAxis = d3.svg.axis()
                         .scale(x)
                         .tickSize(0)
@@ -561,7 +599,8 @@
                         .attr("x", function(d) { return x(d.x); })
                         .attr("y", height)
                         .attr("width", x.rangeBand())
-                        .attr("height", 0);
+                        .attr("height", 0)
+                        .on("click", barClick);
 
                 svg.append("g")
                         .attr("class", "x axis")
@@ -575,10 +614,29 @@
                 makeAxisMinor();
             }
 
-            updateView();
+            initView();
+
+            function barClick(rectObject, col, layerN) {
+                console.log("bar clicked");
+                console.log(layerN);
+                var newDataYear = Object.create(dataYear); // create new object!
+                // switch element 0 and 'layer' --> move layer to bottom
+                var temp = dataYear[layerN];
+                newDataYear[layerN] = newDataYear[0];
+                newDataYear[0] = temp;
+
+                var curView = d3.select('input[name="mode"]:checked').node().value;
+
+                if (curView === "grouped") console.log("Not doing anything for now..");
+                else if(curView == "relative") updateRelative(newDataYear);
+                else if(curView == "stacked") updateStacked(newDataYear);
+                else if(curView == "compare") console.log("ERROR: WUT? Clicked bar in line graph?");
+
+                clearTimeout(timeout);
+            }
 
 //---------------------- Getallen in bars zetten --------------------------
-            function updateBarNumbers() {
+            function initBarNumbers() {
                 barNumbersText = layer.selectAll("text")
                         .data(function(d) { return d; })
                         .enter()
@@ -598,10 +656,10 @@
                         .attr("y", function(d) { return y(d.y0 + d.y)+(y(d.y0) - y(d.y0 + d.y))/2 + (maxSizeText * d.y/yStackMaxYear)/2; });
             }
 
-            updateBarNumbers();
+            initBarNumbers();
 
 //----------------------legende maken-----------------------
-            function updateLegend(data) {
+            function initLegend(data) {
                 var legendRectSize = 18;    // size of colored square
                 var legendSpacing = 4;      // spacing between entries
 
@@ -635,23 +693,14 @@
                         });
             }
 
-            updateLegend(genres);
+            initLegend(genres);
 
             function legendClick(i) {
                 console.log(i); // outputs the index of the clicked legend item. (top = 0, bottom = n)
-
-                // TEST CODE
-                var newDataYear = dataYear;
-                // switch element 0 and i
-                var temp = dataYear[i];
-                newDataYear[i] = newDataYear[0];
-                newDataYear[0] = temp;
-                updateRelative(newDataYear);
-                updateView();
             }
 
 //--------------------------- Compare lines aanmaken -------------------------
-            function updateCompare(data) {
+            function initCompareLines(data) {
 
                 var xq = d3.scale.ordinal()
                         .domain([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44])
@@ -693,7 +742,7 @@
                         .attr("fill", "none");
             }
 
-            updateCompare(layersQ);
+            initCompareLines(layersQ);
 
 //--------------------------- update transition shizzle ------------------------------
 
@@ -768,11 +817,7 @@
                     wasLine = false;
                 }
 
-                yGroupMaxYear = d3.max(layersYear, function(layer) { return d3.max( layer, function(d) { return d.y; }); });
-
                 newYAxis(yGroupMaxYear);
-
-                var n = layersYear.length;
 
                 var widthbar = x.rangeBand() / n;
 
