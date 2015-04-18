@@ -63,14 +63,13 @@
 <div id="id01"></div>
 
     <script>
-    	$.getJSON("data1-1600.json", function(json) {
-//    	$.getJSON("data1-16387.json", function(json) {
+//    	$.getJSON("data1-1600.json", function(json) {
+    	$.getJSON("data1-16387.json", function(json) {
 //        console.log("JSON data");
 //        console.log(json); // this will show the info it in firebug console
 
             var genres = [];
    			var dataQs = combineAndSortGenresAndDates(json, genres);
-
             var dataYear = FromQsToYears(dataQs);
 
             visualise(dataQs, dataYear, genres);
@@ -544,7 +543,7 @@
             }
 
 //--------------------------- Init lines  -------------------------
-            // ik zou dit in het begin van de updateLines functie willen zetten maar om de een of andere
+            // ik zou dit in het begin van de initCompareLines functie willen zetten maar om de een of andere
             // mysterieuze reden werkt dat niet dan.
             function initCompare() {
                 var genreCounter = 0,
@@ -573,7 +572,6 @@
              console.log("layersQ");
              console.log(layersQ);
              */
-
             function initView() {
                 xAxis = d3.svg.axis()
                         .scale(x)
@@ -657,6 +655,18 @@
             }
 
             initBarNumbers();
+
+
+//---------------------- Kwartalen weergeven --------------------------
+            // WIP
+            function initQsText() {
+                var qsText = layers.selectAll("text")
+                        .data(function (d) { return d; })
+                        .enter()
+                        .append("text")
+                        .attr("x", function(d) { return x(d.x) + x.rangeBand()/2-(maxSizeText * d.y/yStackMaxYear)/2;})
+                        .attr("y");
+            }
 
 //----------------------legende maken-----------------------
             function initLegend(data) {
