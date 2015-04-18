@@ -395,8 +395,8 @@
             // brackets zodat ik die hoop hier kan toeklappen in mijn IDE :P sorry als het u stoort
             {
                 // General
-                var margin = {top: 40, right: 100, bottom: 40, left: 50},
-                        width = 1024 - margin.left - margin.right,
+                var margin = {top: 40, right: 100, bottom: 40, left: 80},
+                        width = 1054 - margin.left - margin.right,
                         height = 520 - margin.top - margin.bottom;
 
                 var colorArray = ["#538ed5", "#953735", "#e46d0a", "#75923c", "#b2a1c7", "#dc143c", "#87cefa",
@@ -462,6 +462,30 @@
                         .domain([0, yStackMaxYear])
                         .range([height, 0]);
             }
+
+            //----- y axis label text ----
+            function yInitLabel() {
+                var extraMargin = 20;
+                svg.append("text")
+                        .attr("class", "yLabel")
+                        .attr("x", - margin.left / 2 - extraMargin)
+                        .attr("y", 0)
+                        .text("yLabel");
+
+                yUpdateLabel();
+            }
+
+            yInitLabel();
+
+            function yUpdateLabel() {
+                var curView = d3.select('input[name="mode"]:checked').node().value;
+
+                if (curView === "grouped") svg.select(".yLabel").text("Amount");
+                else if(curView == "relative") svg.select(".yLabel").text("%");
+                else if(curView == "stacked") svg.select(".yLabel").text("Amount");
+                else if(curView == "compare") svg.select(".yLabel").text("Amount");
+            }
+            //-----
 
             // Update the layer stack for the stacked bar charts according to the new data
             function updateLayerStack(data) {
@@ -644,6 +668,7 @@
                         .text(function(d) { return d.y })
                         .style("font-size", function(d) {return maxSizeText * d.y/yStackMaxYear + "px"})
                         .attr("fill", "black");
+
                 rect.transition()
                         .delay(function(d, i) { return i * 10; })
                         .attr("y", function(d) { return y(d.y0 + d.y); })
@@ -791,7 +816,9 @@
 
             function change() {
                 clearTimeout(timeout);
+
                 deleteQsText(); // delete Qs from other views
+                yUpdateLabel();
 
                 if (this.value === "grouped") transitionGrouped();
                 else if(this.value == "relative") transitionRelative();
