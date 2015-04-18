@@ -63,8 +63,8 @@
 <div id="id01"></div>
 
     <script>
-//    	$.getJSON("data1-1600.json", function(json) {
-    	$.getJSON("data1-16387.json", function(json) {
+    	$.getJSON("data1-1600.json", function(json) {
+//    	$.getJSON("data1-16387.json", function(json) {
 //        console.log("JSON data");
 //        console.log(json); // this will show the info it in firebug console
 
@@ -395,9 +395,9 @@
             // brackets zodat ik die hoop hier kan toeklappen in mijn IDE :P sorry als het u stoort
             {
                 // General
-                var margin = {top: 40, right: 100, bottom: 20, left: 50},
+                var margin = {top: 40, right: 100, bottom: 40, left: 50},
                         width = 1024 - margin.left - margin.right,
-                        height = 500 - margin.top - margin.bottom;
+                        height = 520 - margin.top - margin.bottom;
 
                 var colorArray = ["#538ed5", "#953735", "#e46d0a", "#75923c", "#b2a1c7", "#dc143c", "#87cefa",
                     "#90ee90", "#add8e6", "#d3d3d3", "#cf1256", "#12cf5e"];
@@ -656,18 +656,6 @@
 
             initBarNumbers();
 
-
-//---------------------- Kwartalen weergeven --------------------------
-            // WIP
-            function initQsText() {
-                var qsText = layers.selectAll("text")
-                        .data(function (d) { return d; })
-                        .enter()
-                        .append("text")
-                        .attr("x", function(d) { return x(d.x) + x.rangeBand()/2-(maxSizeText * d.y/yStackMaxYear)/2;})
-                        .attr("y");
-            }
-
 //----------------------legende maken-----------------------
             function initLegend(data) {
                 var legendRectSize = 18;    // size of colored square
@@ -712,8 +700,11 @@
 //--------------------------- Compare lines aanmaken -------------------------
             function initCompareLines(data) {
 
+                var nbQs = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,
+                    23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44];
+
                 var xq = d3.scale.ordinal()
-                        .domain([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44])
+                        .domain(nbQs)
                         .rangeRoundBands([0, width], .08);
 
                 var city = svg.selectAll(".city")
@@ -754,16 +745,54 @@
 
             initCompareLines(layersQ);
 
+            //---------------------- Kwartalen weergeven/deleten --------------------------
+            // called from transitionLineGraph()
+            function initQsText() {
+                // Hier wel maar tot 43 want anders een Q teveel!
+                var nbQs = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,
+                    23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43];
+                var Qs = ["Q1", "Q2", "Q3", "Q4"];
+
+                var xq = d3.scale.ordinal()
+                        .domain(nbQs)
+                        .rangeRoundBands([0, width], .08);
+
+                for (var i = 0; i < nbQs.length; i++) {
+                    var temp = svg.append("text")
+                            .attr("class", "qs")
+                            .attr("x", xq(i))
+                            .attr("y", height + margin.bottom + 50)
+                            .text(Qs[i%4]);
+
+                    temp.transition()
+                            .delay(function(d, i) { return i * 10; })
+                            .attr("y", height + margin.bottom/2 + 5);
+                }
+            }
+
+            // called from change()
+            function deleteQsText() {
+                var elements = d3.selectAll(".qs");
+                var transitionDuration = 400;
+
+                elements.transition()
+                        .duration(transitionDuration)
+                        .attr("y", height + margin.bottom + 50)
+                        .each("end", function () {d3.selectAll(".qs").remove();});
+            }
+
 //--------------------------- update transition shizzle ------------------------------
 
             d3.selectAll("input").on("change", change);
 
             var timeout = setTimeout(function() {
-                d3.select("input[value=\"grouped\"]").property("checked", true).each(change);
+                d3.select("input[value=\"compare\"]").property("checked", true).each(change);
             }, 2000);
 
             function change() {
                 clearTimeout(timeout);
+                deleteQsText(); // delete Qs from other views
+
                 if (this.value === "grouped") transitionGrouped();
                 else if(this.value == "relative") transitionRelative();
                 else if(this.value == "compare") transitionLineGraph();
@@ -817,6 +846,8 @@
                         .delay(function(d, i) { return i * 10; })
                         .attr("d", function(d) { return line(d); })
                         .attr("stroke-width", 2);
+
+                initQsText(); // show the Qs below the years on the x-axis
 
                 wasLine = true;
             }
