@@ -58,11 +58,14 @@
 
 <body>
 
-<h1> Visualization Invisual  </h1>
+<h1> Stream Trends </h1>
 
 <div id="id01"></div>
 
     <script>
+
+        displayLoadingScreen();
+
 //    	$.getJSON("data1-1600.json", function(json) {
     	$.getJSON("data1-16387.json", function(json) {
 //        console.log("JSON data");
@@ -72,8 +75,32 @@
    			var dataQs = combineAndSortGenresAndDates(json, genres);
             var dataYear = FromQsToYears(dataQs);
 
+            removeLoadingScreen();
+
             visualise(dataQs, dataYear, genres);
 		});
+
+        function displayLoadingScreen() {
+            var svg = d3.select("body")
+                    .append("svg")
+                    .attr("id","the_SVG_ID")
+                    .attr("width", 1024)
+                    .attr("height", 512)
+                    .append("g")
+                    .append("text")
+                    .attr("x", 500)
+                    .attr("y", 256)
+                    .attr("class", "loadingText")
+                    .text("Visualisation is loading. Please do not power off or unplug your machine.")
+                    .style("text-anchor", "middle")
+                    .style("font-size", 24);
+
+            return svg;
+        }
+
+        function removeLoadingScreen(svg) {
+            d3.select("#the_SVG_ID").remove();
+        }
 
         // genres is used to RETURN the genres
         function combineAndSortGenresAndDates(json, genres) {
@@ -434,7 +461,7 @@
                 var wasLine = false,
                         layersYear = 0,
                         amountGamesYear = [],
-                        n = 5; // amount of stacked layers
+                        n = 6; // amount of stacked layers // max = 22 // first 12 are useful
 
                 // Relative stacked
                 var yRelativeMax = 0;
@@ -448,6 +475,18 @@
                         lineinX,
                         yCompareMax = 0,
                         layersQ = 0;
+            }
+
+            {
+                initGrouped(dataYear.slice(0, n));
+                initStacked(dataYear.slice(0, n));
+                initRelative(dataYear.slice(0, n));
+                initCompare();
+                initView();
+                yInitLabel();
+                initBarNumbers();
+                initLegend(genres);
+                initCompareLines(layersQ);
             }
 
             // Functions
@@ -474,8 +513,6 @@
 
                 yUpdateLabel();
             }
-
-            yInitLabel();
 
             function yUpdateLabel() {
                 var curView = d3.select('input[name="mode"]:checked').node().value;
@@ -508,8 +545,6 @@
                 ySetStackedDomain();
             }
 
-            initGrouped(dataYear.slice(0, n));
-
             function updateGrouped(data) {
                 initGrouped(data);
 
@@ -528,8 +563,6 @@
                 xSetYearDomain();
                 ySetStackedDomain();
             }
-
-            initStacked(dataYear.slice(0, n));
 
             function updateStacked(data) {
                 initStacked(data);
@@ -557,8 +590,6 @@
                 xSetYearDomain();
                 yRelativeMax = 100; // y domain
             }
-
-            initRelative(dataYear.slice(0, n));
 
             function updateRelative(data) {
                 initRelative(data);
@@ -622,7 +653,20 @@
                         .attr("y", height)
                         .attr("width", x.rangeBand())
                         .attr("height", 0)
-                        .on("click", barClick);
+                        .on("click", barClick)
+                        .on("mouseover", function(d, i, j) {
+                            var strokeColor = "blue";
+                            layer.selectAll("rect")
+                                    .style("stroke", function (e, k, l) {
+                                        return j == l ? strokeColor : null;
+                                    })
+                        })
+                        .on("mouseout", function(d, i, j) {
+                            layer.selectAll("rect")
+                                    .style("stroke", function (e, k, l) {
+                                        return j == l ? null : 0;
+                                    })
+                        });;
 
                 svg.append("g")
                         .attr("class", "x axis")
@@ -636,11 +680,7 @@
                 makeAxisMinor();
             }
 
-            initView();
-
             function barClick(rectObject, col, layerN) {
-                console.log("bar clicked");
-                console.log(layerN);
                 var newDataYear = Object.create(dataYear); // create new object!
                 // switch element 0 and 'layer' --> move layer to bottom
                 var temp = dataYear[layerN];
@@ -669,17 +709,27 @@
                         .style("font-size", function(d) {return maxSizeText * d.y/yStackMaxYear + "px"})
                         .attr("fill", "black");
 
+                // TODO: move this to appropriate place
                 rect.transition()
                         .delay(function(d, i) { return i * 10; })
                         .attr("y", function(d) { return y(d.y0 + d.y); })
                         .attr("height", function(d) { return y(d.y0) - y(d.y0 + d.y); });
 
+                var sizeOneLetter = x.rangeBand()*1.8;
+                //the maximum size of a number must be limited to the width of the bar (the findMagnitude will determine how many numbers there can be max)
+                maxSizeText = sizeOneLetter/findMagnitudeNumber(yGroupMaxYear);
+
+                var maxgroup = yGroupMaxYear + yGroupMaxYear *.1;
+
                 barNumbersText.transition()
                         .delay(function(d, i) { return i * 10; })
-                        .attr("y", function(d) { return y(d.y0 + d.y)+(y(d.y0) - y(d.y0 + d.y))/2 + (maxSizeText * d.y/yStackMaxYear)/2; });
+                        .attr("x", function(d) { return x(d.x) + x.rangeBand()/2; })
+                        .attr("y", function(d) { return y(d.y0 + d.y)+(y(d.y0) - y(d.y0 + d.y))/2 + (maxSizeText * d.y/maxgroup)/2; })
+                        .transition()
+                        .duration(400)
+                        .style("font-size", function(d) {return maxSizeText * d.y/maxgroup + "px"})
+                        .style("text-anchor", "middle");
             }
-
-            initBarNumbers();
 
 //----------------------legende maken-----------------------
             function initLegend(data) {
@@ -715,8 +765,6 @@
                             return data[d];
                         });
             }
-
-            initLegend(genres);
 
             function legendClick(i) {
                 console.log(i); // outputs the index of the clicked legend item. (top = 0, bottom = n)
@@ -768,8 +816,6 @@
                         .attr("fill", "none");
             }
 
-            initCompareLines(layersQ);
-
             //---------------------- Kwartalen weergeven/deleten --------------------------
             // called from transitionLineGraph()
             function initQsText() {
@@ -790,6 +836,7 @@
                             .text(Qs[i%4]);
 
                     temp.transition()
+                            .duration(800)
                             .delay(function(d, i) { return i * 10; })
                             .attr("y", height + margin.bottom/2 + 5);
                 }
@@ -811,7 +858,7 @@
             d3.selectAll("input").on("change", change);
 
             var timeout = setTimeout(function() {
-                d3.select("input[value=\"compare\"]").property("checked", true).each(change);
+                d3.select("input[value=\"relative\"]").property("checked", true).each(change);
             }, 2000);
 
             function change() {
@@ -843,16 +890,21 @@
                         .attr("x", function(d) { return x(d.x); })
                         .attr("width", x.rangeBand());
 
-                var maxSizeTextRel = 20;
+                var sizeOneLetter = x.rangeBand()*1.8;
+                //the maximum size of a number must be limited to the width of the bar (the findMagnitude will determine how many numbers there can be max)
+                maxSizeText = sizeOneLetter/findMagnitudeNumber(yGroupMaxYear);
 
                 barNumbersText.transition().duration(400)
                         .delay(function(d, i) { return i * 10; })
-                        .attr("x", function(d, i) { return x(d.x) + x.rangeBand()/2-(maxSizeTextRel * (y(d.y0/amountGamesYear[i]*100) - y((d.y0 + d.y)/amountGamesYear[i]*100))/100)/2;})
-                        .attr("y", function(d, i) { return (y(d.y0/amountGamesYear[i]*100) - y((d.y0 + d.y)/amountGamesYear[i]*100))/2 + y((d.y0 + d.y)/amountGamesYear[i]*100) + (maxSizeText * d.y/yRelativeMax)/2; })
+                        .attr("x", function(d) { return x(d.x) + x.rangeBand()/2;})
+                        .attr("y", function(d, i) {
+                            return y((d.y0 + d.y)/amountGamesYear[i]*100) + // bottom of rect
+                                    (y(d.y0/amountGamesYear[i]*100) - y((d.y0 + d.y)/amountGamesYear[i]*100)) / 2; }) // + height/2
                         .text(function(d, i) { return Math.round(d.y / amountGamesYear[i] * 100) })
                         .transition()
                         .duration(400)
-                        .style("font-size", function(d,i) {return maxSizeTextRel * (y(d.y0/amountGamesYear[i]*100) - y((d.y0 + d.y)/amountGamesYear[i]*100))/100 + "px"});
+                        .style("font-size", function(d,i) {return Math.min(maxSizeText, (d.y / amountGamesYear[i])*100) + "px"})
+                        .style("text-anchor", "middle");
             }
 
             function transitionLineGraph() {
@@ -904,11 +956,12 @@
                 barNumbersText.transition()
                         .duration(400)
                         .delay(function(d, i) { return i * 10; })
-                        .attr("x", function(d, i, j) { return x(d.x) + x.rangeBand() / n * j + widthbar/2 - sizeText/2;})
+                        .attr("x", function(d, i, j) { return x(d.x) + x.rangeBand() / n * j + widthbar/2;})
                         .attr("y", function(d) { return y(d.y)-4 })
                         .text(function(d) { return d.y })
                         .transition().duration(400)
                         .style("font-size", function() {return sizeText + "px"})
+                        .style("text-anchor", "middle");
             }
 
             function transitionStacked() {
@@ -927,14 +980,22 @@
                         .attr("x", function(d) { return x(d.x); })
                         .attr("width", x.rangeBand());
 
+                var sizeOneLetter = x.rangeBand()*1.8;
+                //the maximum size of a number must be limited to the width of the bar (the findMagnitude will determine how many numbers there can be max)
+                maxSizeText = sizeOneLetter/findMagnitudeNumber(yGroupMaxYear);
+
+                var maxgroup = yGroupMaxYear + yGroupMaxYear *.1;
+
                 barNumbersText.transition().duration(400)
                         .delay(function(d, i) { return i * 10; })
-                        .attr("x", function(d) { return x(d.x) + x.rangeBand()/2-(maxSizeText * d.y/yStackMaxYear)/2;})
-                        .attr("y", function(d) { return y(d.y0 + d.y)+(y(d.y0) - y(d.y0 + d.y))/2 + (maxSizeText * d.y/yStackMaxYear)/2; })
+                    //left side bar + width bar / 2 - size text/2
+                        .attr("x", function(d) { return x(d.x) + x.rangeBand()/2;})
+                        .attr("y", function(d) { return y(d.y0 + d.y)+(y(d.y0) - y(d.y0 + d.y))/2 + (maxSizeText * d.y/maxgroup)/2; })
                         .text(function(d) { return d.y })
                         .transition()
                         .duration(400)
-                        .style("font-size", function(d) {return maxSizeText * d.y/yStackMaxYear + "px"});
+                        .style("font-size", function(d) {return maxSizeText * d.y/maxgroup + "px"})
+                        .style("text-anchor", "middle");
 
             }
 
@@ -968,6 +1029,15 @@
                         .classed("minor", true);
             }
 
+            function findMagnitudeNumber(max) {
+                var num = 0;
+                var temp = max;
+                while(temp>=1){
+                    temp = temp/10;
+                    num++;
+                }
+                return num;
+            }
         }
         //
 
