@@ -822,6 +822,7 @@
                         .delay(function(d, i) { return i * 10; })
                         .attr("x", function(d, i) { return x(d.x) + x.rangeBand()/2-(maxSizeTextRel * (y(d.y0/amountGamesYear[i]*100) - y((d.y0 + d.y)/amountGamesYear[i]*100))/100)/2;})
                         .attr("y", function(d, i) { return (y(d.y0/amountGamesYear[i]*100) - y((d.y0 + d.y)/amountGamesYear[i]*100))/2 + y((d.y0 + d.y)/amountGamesYear[i]*100) + (maxSizeText * d.y/yRelativeMax)/2; })
+                        .text(function(d, i) { return Math.round(d.y / amountGamesYear[i] * 100) })
                         .transition()
                         .duration(400)
                         .style("font-size", function(d,i) {return maxSizeTextRel * (y(d.y0/amountGamesYear[i]*100) - y((d.y0 + d.y)/amountGamesYear[i]*100))/100 + "px"});
@@ -878,6 +879,7 @@
                         .delay(function(d, i) { return i * 10; })
                         .attr("x", function(d, i, j) { return x(d.x) + x.rangeBand() / n * j + widthbar/2 - sizeText/2;})
                         .attr("y", function(d) { return y(d.y)-4 })
+                        .text(function(d) { return d.y })
                         .transition().duration(400)
                         .style("font-size", function() {return sizeText + "px"})
             }
@@ -902,6 +904,7 @@
                         .delay(function(d, i) { return i * 10; })
                         .attr("x", function(d) { return x(d.x) + x.rangeBand()/2-(maxSizeText * d.y/yStackMaxYear)/2;})
                         .attr("y", function(d) { return y(d.y0 + d.y)+(y(d.y0) - y(d.y0 + d.y))/2 + (maxSizeText * d.y/yStackMaxYear)/2; })
+                        .text(function(d) { return d.y })
                         .transition()
                         .duration(400)
                         .style("font-size", function(d) {return maxSizeText * d.y/yStackMaxYear + "px"});
