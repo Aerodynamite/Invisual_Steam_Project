@@ -97,21 +97,29 @@
     <script>
 
         displayLoadingScreen();
-
-//    	$.getJSON("data1-1600.json", function(json) {
-    	$.getJSON("data1-16387.json", function(json) {
-//        console.log("JSON data");
-//        console.log(json); // this will show the info it in firebug console
-
-            var genres = [];
-   			var dataQs = combineAndSortGenresAndDates(json, genres);
-            var dataYear = FromQsToYears(dataQs);
-
-            removeLoadingScreen();
-
-            visualise(dataQs, dataYear, genres);
-		});
 		
+		var data = {};
+		var genres = [];
+		var dataQs = {};
+		var dataYear = {};
+		
+    	$.getJSON("data1-16387.json", function(json) {
+			var data = json;
+			$.getJSON("genres.json", function(genreData) {
+				var genres = genreData;
+				$.getJSON("dataQs.json", function(qData) {
+					var dataQs = qData;
+					$.getJSON("dataYears.json", function(yearData) {
+						var dataYear = yearData;
+						
+						removeLoadingScreen();
+	
+						visualise(dataQs, dataYear, genres);
+					});
+				});
+			});
+		});
+
 		function getChecked(genre){
 			var boxes = $("input:checkbox");
 			for(var i = 0; i < boxes.length; i++){
