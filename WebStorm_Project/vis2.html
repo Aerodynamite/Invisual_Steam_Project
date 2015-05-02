@@ -31,8 +31,8 @@
             stroke: #777;
             stroke-dasharray: 5,4;
         }
-
-        form {
+		
+		#radio {
             position: absolute;
             right: 10px;
             top: 10px;
@@ -45,15 +45,47 @@
         rect {
             stroke-width: 2;
         }
+		
+		#checks {
+			position: absolute;
+            right: -250px;
+            top: 80px;
+		}
     </style>
 
 </head>
 
-<form>
+<form id="radio">
     <label><input type="radio" name="mode" value="grouped"> Grouped</label>
     <label><input type="radio" name="mode" value="relative"> Stacked (relative) </label>
     <label><input type="radio" name="mode" value="stacked" checked> Stacked (absolute)</label>
     <label><input type="radio" name="mode" value="compare"> Compare</label>
+</form>
+
+<form id="checks"> 
+	<label> Select your genres </label><br><br>
+	<input type="checkbox" name="genre" value="Action" checked>Action<br>
+	<input type="checkbox" name="genre" value="Indie" checked>Indie<br>
+	<input type="checkbox" name="genre" value="Strategy" checked>Strategy<br>
+	<input type="checkbox" name="genre" value="Adventure" checked>Adventure<br>
+	<input type="checkbox" name="genre" value="Simulation" checked>Simulation<br>
+	<input type="checkbox" name="genre" value="Casual">Casual<br>
+	<input type="checkbox" name="genre" value="RPG">RPG<br>
+	<input type="checkbox" name="genre" value="Free to Play">Free to Play<br>
+	<input type="checkbox" name="genre" value="Massively Multiplayer">Massively Multiplayer<br>
+	<input type="checkbox" name="genre" value="Early Access">Early Access<br>
+	<input type="checkbox" name="genre" value="Racing">Racing<br>
+	<input type="checkbox" name="genre" value="Sports">Sports<br>
+	<input type="checkbox" name="genre" value="Design & Illustration">Design & Illustration<br>
+	<input type="checkbox" name="genre" value="Web Publishing">Web Publishing<br>
+	<input type="checkbox" name="genre" value="Utilities">Utilities<br>
+	<input type="checkbox" name="genre" value="Audio Production">Audio Production<br>
+	<input type="checkbox" name="genre" value="Animation & Modeling">Animation & Modeling<br>
+	<input type="checkbox" name="genre" value="Education">Education<br>
+	<input type="checkbox" name="genre" value="Software Training">Software Training<br>
+	<input type="checkbox" name="genre" value="Video Production">Video Production<br>
+	<input type="checkbox" name="genre" value="Photo Editing">Photo Editing<br>
+	<input type="checkbox" name="genre" value="Accounting">Accounting
 </form>
 
 <body>
@@ -79,7 +111,16 @@
 
             visualise(dataQs, dataYear, genres);
 		});
-
+		
+		function getChecked(genre){
+			var boxes = $("input:checkbox");
+			for(var i = 0; i < boxes.length; i++){
+				if(boxes[i].value == genre){
+					return boxes[i].checked;	
+				}
+			}
+		}
+		
         function displayLoadingScreen() {
             var svg = d3.select("body")
                     .append("svg")
@@ -461,7 +502,7 @@
                 var wasLine = false,
                         layersYear = 0,
                         amountGamesYear = [],
-                        n = 6; // amount of stacked layers // max = 22 // first 12 are useful
+                        n = genres.length; // amount of stacked layers // max = 22 // first 12 are useful
 
                 // Relative stacked
                 var yRelativeMax = 0;
@@ -531,6 +572,9 @@
 
                 layersYear = stack(d3.range(n).map(function () {
                     var ret = data[genreCounter].games;
+					for(var i = 0; i < ret.length; i++){
+						ret[i].genre = data[genreCounter].genre;
+					}
                     genreCounter = genreCounter + 1;
                     return ret;
                 }));
@@ -606,6 +650,9 @@
 
                 layersQ = stack(d3.range(n).map(function () {
                     var ret = dataQs[genreCounter].games;
+					for(var i = 0; i < ret.length; i++){
+						ret[i].genre = dataQs[genreCounter].genre;
+					}
                     genreCounter = genreCounter + 1;
                     return ret;
                 }));
@@ -864,15 +911,37 @@
             function change() {
                 clearTimeout(timeout);
 
-                deleteQsText(); // delete Qs from other views
+                //deleteQsText(); // delete Qs from other views
                 yUpdateLabel();
 
                 if (this.value === "grouped") transitionGrouped();
-                else if(this.value == "relative") transitionRelative();
-                else if(this.value == "compare") transitionLineGraph();
-                else if(this.value == "stacked")transitionStacked();
+				else if(this.value == "relative") transitionRelative();
+				else if(this.value == "compare") transitionLineGraph();
+				else if(this.value == "stacked") transitionStacked();
+				else if(this.type == "checkbox") transitionCheckbox();
             }
-
+			
+			function transitionCheckbox(){
+				// determine which graph we are dealing with
+				var graphList = $("input:radio");
+				var graph = "";
+				for(var i = 0; i < graphList.length; i++){
+					if(graphList[i].checked){
+						graph = graphList[i].value;
+					}
+				}
+				// update to the graph we were dealing with
+				if(graph == "grouped"){
+					transitionGrouped();
+				} else if (graph == "relative"){
+					transitionRelative();
+				} else if (graph == "compare"){
+					transitionLineGraph();
+				} else if (graph == "stacked"){
+					transitionStacked();
+				}
+			}
+			
             function transitionRelative() {
                 if(wasLine) {
                     linesinX();
@@ -888,7 +957,13 @@
                         .attr("height", function(d, i) { return y(d.y0/amountGamesYear[i]*100) - y((d.y0 + d.y)/amountGamesYear[i]*100); })
                         .transition()
                         .attr("x", function(d) { return x(d.x); })
-                        .attr("width", x.rangeBand());
+                        .attr("width", x.rangeBand())
+						.attr("fill-opacity", function(d) {
+							if(getChecked(d.genre)){ return 1}
+							else { return 0.3}})
+						.attr("stroke-opacity", function(d) {
+							if(getChecked(d.genre)){ return 1}
+							else { return 0.3}});
 
                 var sizeOneLetter = x.rangeBand()*1.8;
                 //the maximum size of a number must be limited to the width of the bar (the findMagnitude will determine how many numbers there can be max)
@@ -903,7 +978,9 @@
                         .text(function(d, i) { return Math.round(d.y / amountGamesYear[i] * 100) })
                         .transition()
                         .duration(400)
-                        .style("font-size", function(d,i) {return Math.min(maxSizeText, (d.y / amountGamesYear[i])*100) + "px"})
+                        .style("font-size", function(d,i) {
+							if(getChecked(d.genre)){return Math.min(maxSizeText, (d.y / amountGamesYear[i])*100) + "px"}
+							else { return 0 + "px"}})
                         .style("text-anchor", "middle");
             }
 
@@ -925,9 +1002,12 @@
                         .duration(600)
                         .delay(function(d, i) { return i * 10; })
                         .attr("d", function(d) { return line(d); })
-                        .attr("stroke-width", 2);
+                        .attr("stroke-width", 2)
+						.attr("stroke-opacity", function(d) {
+							if(getChecked(d[0].genre)){return 1}
+							else { return 0.3}});
 
-                initQsText(); // show the Qs below the years on the x-axis
+                //initQsText(); // show the Qs below the years on the x-axis
 
                 wasLine = true;
             }
@@ -939,14 +1019,30 @@
                 }
 
                 newYAxis(yGroupMaxYear);
-
-                var widthbar = x.rangeBand() / n;
-
+				
+				var cs = $("#checks input:checked");
+				var c = cs.length;
+				console.log(c);
+				var widthbar = x.rangeBand() / c;
+				var drawn = 0;
+				
                 rect.transition()
                         .duration(600)
                         .delay(function(d, i) { return i * 10; })
-                        .attr("x", function(d, i, j) { return x(d.x) + x.rangeBand() / n * j; })
-                        .attr("width", widthbar)
+                        .attr("x", function(d, i, j) { 
+							var value = x(d.x) + x.rangeBand() / c * drawn;
+							if(i==10) {
+								if(getChecked(d.genre)) {
+									drawn++;
+								}
+								if(j==21){
+									drawn = 0;
+								}
+							}
+							return  value})
+                        .attr("width", function(d){ 
+							if(getChecked(d.genre)){ return widthbar} 
+							else { return 0}})
                         .transition()
                         .attr("y", function(d) { return y(d.y); })
                         .attr("height", function(d) { return height - y(d.y); });
@@ -956,11 +1052,23 @@
                 barNumbersText.transition()
                         .duration(400)
                         .delay(function(d, i) { return i * 10; })
-                        .attr("x", function(d, i, j) { return x(d.x) + x.rangeBand() / n * j + widthbar/2;})
+                        .attr("x", function(d, i, j) { 
+							var value = x(d.x) + x.rangeBand() / c * drawn + widthbar/2;
+							if(i==10) {
+								if(getChecked(d.genre)) {
+									drawn++;
+								}
+								if(j==21){
+									drawn = 0;
+								}
+							}
+							return  value})
                         .attr("y", function(d) { return y(d.y)-4 })
                         .text(function(d) { return d.y })
                         .transition().duration(400)
-                        .style("font-size", function() {return sizeText + "px"})
+                        .style("font-size", function(d) {
+							if(getChecked(d.genre)){ return sizeText + "px"}
+							else { return 0 + "px"}})
                         .style("text-anchor", "middle");
             }
 
@@ -975,10 +1083,16 @@
                         .duration(600)
                         .delay(function(d, i) { return i * 10; })
                         .attr("y", function(d) { return y(d.y0 + d.y); })
-                        .attr("height", function(d) { return y(d.y0) - y(d.y0 + d.y); })
+                        .attr("height", function(d) {return y(d.y0) - y(d.y0 + d.y); })
                         .transition()
                         .attr("x", function(d) { return x(d.x); })
-                        .attr("width", x.rangeBand());
+                        .attr("width", x.rangeBand())
+						.attr("fill-opacity", function(d) {
+							if(getChecked(d.genre)){ return 1}
+							else { return 0.3}})
+						.attr("stroke-opacity", function(d) {
+							if(getChecked(d.genre)){ return 1}
+							else { return 0.3}});
 
                 var sizeOneLetter = x.rangeBand()*1.8;
                 //the maximum size of a number must be limited to the width of the bar (the findMagnitude will determine how many numbers there can be max)
@@ -994,7 +1108,9 @@
                         .text(function(d) { return d.y })
                         .transition()
                         .duration(400)
-                        .style("font-size", function(d) {return maxSizeText * d.y/maxgroup + "px"})
+                        .style("font-size", function(d) {
+							if(getChecked(d.genre)){return maxSizeText * d.y/maxgroup + "px"}
+							else { return 0 + "px"}})
                         .style("text-anchor", "middle");
 
             }
