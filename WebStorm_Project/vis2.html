@@ -64,28 +64,28 @@
 
 <form id="checks"> 
 	<label> Select your genres </label><br><br>
-	<input type="checkbox" name="genre" value="Action" checked>Action<br>
-	<input type="checkbox" name="genre" value="Indie" checked>Indie<br>
-	<input type="checkbox" name="genre" value="Strategy" checked>Strategy<br>
-	<input type="checkbox" name="genre" value="Adventure" checked>Adventure<br>
-	<input type="checkbox" name="genre" value="Simulation" checked>Simulation<br>
-	<input type="checkbox" name="genre" value="Casual">Casual<br>
-	<input type="checkbox" name="genre" value="RPG">RPG<br>
-	<input type="checkbox" name="genre" value="Free to Play">Free to Play<br>
-	<input type="checkbox" name="genre" value="Massively Multiplayer">Massively Multiplayer<br>
-	<input type="checkbox" name="genre" value="Early Access">Early Access<br>
-	<input type="checkbox" name="genre" value="Racing">Racing<br>
-	<input type="checkbox" name="genre" value="Sports">Sports<br>
-	<input type="checkbox" name="genre" value="Design & Illustration">Design & Illustration<br>
-	<input type="checkbox" name="genre" value="Web Publishing">Web Publishing<br>
-	<input type="checkbox" name="genre" value="Utilities">Utilities<br>
-	<input type="checkbox" name="genre" value="Audio Production">Audio Production<br>
-	<input type="checkbox" name="genre" value="Animation & Modeling">Animation & Modeling<br>
-	<input type="checkbox" name="genre" value="Education">Education<br>
-	<input type="checkbox" name="genre" value="Software Training">Software Training<br>
-	<input type="checkbox" name="genre" value="Video Production">Video Production<br>
-	<input type="checkbox" name="genre" value="Photo Editing">Photo Editing<br>
-	<input type="checkbox" name="genre" value="Accounting">Accounting
+	<label title="Action" id="Action"><input type="checkbox" name="genre" value="Action" checked >Action</label><br>
+	<label title="Indie" id="Indie"><input type="checkbox" name="genre" value="Indie" checked>Indie</label><br>
+	<label title="Strategy" id="Strategy"><input type="checkbox" name="genre" value="Strategy" checked>Strategy</label><br>
+	<label title="Adventure" id="Adventure"><input type="checkbox" name="genre" value="Adventure" checked>Adventure</label><br>
+	<label title="Simulation" id="Simulation"><input type="checkbox" name="genre" value="Simulation" checked>Simulation</label><br>
+	<label title="Casual" id="Casual"><input type="checkbox" name="genre" value="Casual">Casual</label><br>
+	<label title="RPG" id="RPG"><input type="checkbox" name="genre" value="RPG">RPG</label><br>
+	<label title="Free to Play" id="Free to Play"><input type="checkbox" name="genre" value="Free to Play">Free to Play</label><br>
+	<label title="Massively Multiplayer" id="Massively Multiplayer"><input type="checkbox" name="genre" value="Massively Multiplayer">Massively Multiplayer</label><br>
+	<label title="Early Access" id="Early Access"><input type="checkbox" name="genre" value="Early Access">Early Access</label><br>
+	<label title="Racing" id="Racing"><input type="checkbox" name="genre" value="Racing">Racing</label><br>
+	<label title="Sports" id="Sports"><input type="checkbox" name="genre" value="Sports">Sports</label><br>
+	<label title="Design & Illustration" id="Design & Illustration"><input type="checkbox" name="genre" value="Design & Illustration">Design & Illustration</label><br>
+	<label title="Web Publishing" id="Web Publishing"><input type="checkbox" name="genre" value="Web Publishing">Web Publishing</label><br>
+	<label title="Utilities" id="Utilities"><input type="checkbox" name="genre" value="Utilities">Utilities</label><br>
+	<label title="Audio Production" id="Audio Production"><input type="checkbox" name="genre" value="Audio Production">Audio Production</label><br>
+	<label title="Animation & Modeling" id="Animation & Modeling"><input type="checkbox" name="genre" value="Animation & Modeling">Animation & Modeling</label><br>
+	<label title="Education" id="Education"><input type="checkbox" name="genre" value="Education">Education</label><br>
+	<label title="Software Training" id="Software Training"><input type="checkbox" name="genre" value="Software Training">Software Training</label><br>
+	<label title="Video Production" id="Video Production"><input type="checkbox" name="genre" value="Video Production">Video Production</label><br>
+	<label title="Photo Editing" id="Photo Editing"><input type="checkbox" name="genre" value="Photo Editing">Photo Editing</label><br>
+	<label title="Accounting" id="Accounting"><input type="checkbox" name="genre" value="Accounting">Accounting</label>
 </form>
 
 <body>
@@ -477,10 +477,17 @@
 
                 var colorArray = ["#538ed5", "#953735", "#e46d0a", "#75923c", "#b2a1c7", "#dc143c", "#87cefa",
                     "#90ee90", "#add8e6", "#d3d3d3", "#cf1256", "#12cf5e"];
-
+				
+                /*var greyArray = ["#303030","#383838","#404040","#484848","#505050","#585858","#606060","#686868","#707070","#787878",
+								"#808080","#888888","#909090","#989898","#A0A0A0","#A8A8A8","#B0B0B0","#B8B8B8","#C0C0C0","#C8C8C8"];
+				*/ // no longer used 
+				
                 var color = d3.scale.ordinal()
                         .range(colorArray);
-
+				var greys = d3.scale.linear()
+						.domain([0,25])
+						.range(["grey","white"]);
+						
                 // d3 horizontal and vertical scale variables
                 var x = 0,
                         y = 0,
@@ -534,8 +541,9 @@
                 initView();
                 yInitLabel();
                 initBarNumbers();
-                initLegend(genres);
+                //initLegend(genres);
                 initCompareLines(layersQ);
+				colorChecks();
             }
 
             // Functions
@@ -736,20 +744,22 @@
             }
 
             function barClick(rectObject, col, layerN) {
-                var newDataYear = Object.create(dataYear); // create new object!
-                // switch element 0 and 'layer' --> move layer to bottom
-                var temp = dataYear[layerN];
-                newDataYear[layerN] = newDataYear[0];
-                newDataYear[0] = temp;
+				if(getChecked(rectObject.genre)){
+					var newDataYear = Object.create(dataYear); // create new object!
+					// switch element 0 and 'layer' --> move layer to bottom
+					var temp = dataYear[layerN];
+					newDataYear[layerN] = newDataYear[0];
+					newDataYear[0] = temp;
 
-                var curView = d3.select('input[name="mode"]:checked').node().value;
+					var curView = d3.select('input[name="mode"]:checked').node().value;
 
-                if (curView === "grouped") console.log("Not doing anything for now..");
-                else if(curView == "relative") updateRelative(newDataYear);
-                else if(curView == "stacked") updateStacked(newDataYear);
-                else if(curView == "compare") console.log("ERROR: WUT? Clicked bar in line graph?");
+					if (curView === "grouped") console.log("Not doing anything for now..");
+					else if(curView == "relative") updateRelative(newDataYear);
+					else if(curView == "stacked") updateStacked(newDataYear);
+					else if(curView == "compare") console.log("ERROR: WUT? Clicked bar in line graph?");
 
-                clearTimeout(timeout);
+					clearTimeout(timeout);
+				}
             }
 
 //---------------------- Getallen in bars zetten --------------------------
@@ -921,7 +931,7 @@
 
                 //deleteQsText(); // delete Qs from other views
                 yUpdateLabel();
-
+			
                 if (this.value === "grouped") transitionGrouped();
 				else if(this.value == "relative") transitionRelative();
 				else if(this.value == "compare") transitionLineGraph();
@@ -929,7 +939,19 @@
 				else if(this.type == "checkbox") transitionCheckbox();
             }
 			
+			function colorChecks(){
+				var cs = $("input:checkbox");
+				for(i = 0; i < cs.length; i++){
+					if(cs[i].checked){
+						cs[i].parentNode.style.backgroundColor = color(i);
+					} else {
+						cs[i].parentNode.style.backgroundColor = greys(i);
+					}
+				}
+			}
+			
 			function transitionCheckbox(){
+				colorChecks();
 				// determine which graph we are dealing with
 				var graphList = $("input:radio");
 				var graph = "";
@@ -955,7 +977,7 @@
                     linesinX();
                     wasLine = false;
                 }
-
+				
                 newYAxis(yRelativeMax);
 
                 rect.transition()
@@ -966,12 +988,15 @@
                         .transition()
                         .attr("x", function(d) { return x(d.x); })
                         .attr("width", x.rangeBand())
+						.style("fill", function(d, i, j) {
+							if(getChecked(d.genre)) {return color(j); }
+							else { return greys(j); }})
 						.attr("fill-opacity", function(d) {
 							if(getChecked(d.genre)){ return 1}
-							else { return 0.3}})
+							else { return 1}})
 						.attr("stroke-opacity", function(d) {
 							if(getChecked(d.genre)){ return 1}
-							else { return 0.3}});
+							else { return 1}});
 
                 var sizeOneLetter = x.rangeBand()*1.8;
                 //the maximum size of a number must be limited to the width of the bar (the findMagnitude will determine how many numbers there can be max)
@@ -1003,17 +1028,23 @@
                         .delay(function(d, i) { return i * 10; })
                         .attr("height", function() {return 0;})
                         .attr("y", function() {return height;});
-
+				
+				yCompareMax = d3.max(layersQ, function(layersQ) {
+					return d3.max( layersQ,function(d) {
+						if(getChecked(d.genre)) {return d.y; } else { return 0; }}); });
                 newYAxis(yCompareMax);
 
                 lines.transition()
                         .duration(600)
                         .delay(function(d, i) { return i * 10; })
                         .attr("d", function(d) { return line(d); })
+						.attr("stroke", function(d, i) {
+							if(getChecked(d[0].genre)) {return color(i); }
+							else { return greys(i); }})
                         .attr("stroke-width", 2)
 						.attr("stroke-opacity", function(d) {
 							if(getChecked(d[0].genre)){return 1}
-							else { return 0.3}});
+							else { return 1}});
 
                 //initQsText(); // show the Qs below the years on the x-axis
 
@@ -1025,12 +1056,14 @@
                     linesinX();
                     wasLine = false;
                 }
-
+				
+				yGroupMaxYear = d3.max(layersYear, function(layer) { 
+					return d3.max( layer, function(d) { 
+						if(getChecked(d.genre)) {return d.y; } else { return 0; }}); });
                 newYAxis(yGroupMaxYear);
 				
 				var cs = $("#checks input:checked");
 				var c = cs.length;
-				console.log(c);
 				var widthbar = x.rangeBand() / c;
 				var drawn = 0;
 				
@@ -1079,28 +1112,42 @@
 							else { return 0 + "px"}})
                         .style("text-anchor", "middle");
             }
-
+			
+			function redoY0Stacked(){
+				
+			}
+			
             function transitionStacked() {
                 if(wasLine) {
                     linesinX();
                     wasLine = false;
                 }
+				
+				yStackMaxYear = d3.max(layersYear, function(layer) { 
+					return d3.max( layer, function(d) { 
+						if(getChecked(d.genre)) {return d.y0 + d.y; } else { return 0; }}); });
                 newYAxis(yStackMaxYear);
-
+				
+				redoY0Stacked();
+				
                 rect.transition()
                         .duration(600)
                         .delay(function(d, i) { return i * 10; })
-                        .attr("y", function(d) { return y(d.y0 + d.y); })
-                        .attr("height", function(d) {return y(d.y0) - y(d.y0 + d.y); })
+                        .attr("y", function(d) { 
+							if(getChecked(d.genre)){return y(d.y0 + d.y); }
+							else { return 0 }})
+						.attr("height", function(d) { 
+							if(getChecked(d.genre)){return y(d.y0) - y(d.y0 + d.y); }
+							else { return 0 }})
                         .transition()
                         .attr("x", function(d) { return x(d.x); })
                         .attr("width", x.rangeBand())
 						.attr("fill-opacity", function(d) {
 							if(getChecked(d.genre)){ return 1}
-							else { return 0.3}})
+							else { return 1}})
 						.attr("stroke-opacity", function(d) {
 							if(getChecked(d.genre)){ return 1}
-							else { return 0.3}});
+							else { return 1}});
 
                 var sizeOneLetter = x.rangeBand()*1.8;
                 //the maximum size of a number must be limited to the width of the bar (the findMagnitude will determine how many numbers there can be max)
