@@ -115,6 +115,7 @@
 						removeLoadingScreen();
 	
 						visualise(dataQs, dataYear, genres);
+						//mouseOver();
 					});
 				});
 			});
@@ -127,6 +128,28 @@
 					return boxes[i].checked;	
 				}
 			}
+		}
+		
+		function mouseOver(){
+			$('form#checks label').each(function(){
+				var label = $(this);
+				
+				label.mouseover(function () {
+					console.log(label);
+					$(this).style.border = "1px solid blue";
+					d3.selectAll("rect")
+						.style("stroke", function (e, k, l) {
+							return label.title == e.genre ? "blue" : null;
+						})
+				});
+				label.mouseout(function () {
+					//label.style.border = "1px solid white";
+					d3.selectAll("rect")
+						.style("stroke", function (e, k, l) {
+							return label.title == e.genre ? "white" : null;
+						})
+				});
+			});
 		}
 		
         function displayLoadingScreen() {
@@ -475,8 +498,7 @@
                         width = 1054 - margin.left - margin.right,
                         height = 520 - margin.top - margin.bottom;
 
-                var colorArray = ["#538ed5", "#953735", "#e46d0a", "#75923c", "#b2a1c7", "#dc143c", "#87cefa",
-                    "#90ee90", "#add8e6", "#d3d3d3", "#cf1256", "#12cf5e"];
+                var colorArray = ["#34DA89", "#83E2DE", "#63B5E8", "#6080FF", "#5F40CF"];
 				
                 /*var greyArray = ["#303030","#383838","#404040","#484848","#505050","#585858","#606060","#686868","#707070","#787878",
 								"#808080","#888888","#909090","#989898","#A0A0A0","#A8A8A8","#B0B0B0","#B8B8B8","#C0C0C0","#C8C8C8"];
@@ -484,10 +506,9 @@
 				
                 var color = d3.scale.ordinal()
                         .range(colorArray);
-				var greys = d3.scale.linear()
-						.domain([0,25])
-						.range(["grey","white"]);
-						
+				
+				var grey = "#CCCCCC";
+				
                 // d3 horizontal and vertical scale variables
                 var x = 0,
                         y = 0,
@@ -626,7 +647,6 @@
 
             function updateStacked(data) {
                 initStacked(data);
-
                 transitionStacked();
             }
 
@@ -653,7 +673,6 @@
 
             function updateRelative(data) {
                 initRelative(data);
-
                 transitionRelative();
             }
 
@@ -719,12 +738,14 @@
                         .on("click", barClick)
                         .on("mouseover", function(d, i, j) {
                             var strokeColor = "blue";
+							highlightGenre(d.genre, strokeColor);
                             layer.selectAll("rect")
                                     .style("stroke", function (e, k, l) {
                                         return j == l ? strokeColor : null;
                                     })
                         })
                         .on("mouseout", function(d, i, j) {
+							highlightGenre(d.genre,"white");
                             layer.selectAll("rect")
                                     .style("stroke", function (e, k, l) {
                                         return j == l ? null : 0;
@@ -745,13 +766,29 @@
 
             function barClick(rectObject, col, layerN) {
 				if(getChecked(rectObject.genre)){
-					var newDataYear = Object.create(dataYear); // create new object!
+				console.log(rectObject);
+					var genreOrder = [];
+					var boxes = $("input:checkbox");
+					for(var i = 0; i < boxes.length; i++){
+						if(boxes[i].checked){
+							genreOrder.push(boxes[i].value);	
+						}
+					}
+					for(var i = 0; i < boxes.length; i++){
+						if(!boxes[i].checked){
+							genreOrder.push(boxes[i].value);	
+						}
+					}
+					var index = genreOrder.indexOf(rectObject.genre);;
+					var newDataYear = redoY0Stacked(); // create new object!
 					// switch element 0 and 'layer' --> move layer to bottom
-					var temp = dataYear[layerN];
-					newDataYear[layerN] = newDataYear[0];
+					console.log(index);
+					var temp = newDataYear[index];
+					newDataYear[index] = newDataYear[0];
 					newDataYear[0] = temp;
 
 					var curView = d3.select('input[name="mode"]:checked').node().value;
+					console.log(curView);
 
 					if (curView === "grouped") console.log("Not doing anything for now..");
 					else if(curView == "relative") updateRelative(newDataYear);
@@ -878,7 +915,14 @@
                             return color(i);
                         })
                         .attr("stroke-width", 0)
-                        .attr("fill", "none");
+                        .attr("fill", "none")
+						.on("mouseover", function(d, i) {
+                            var strokeColor = "blue";
+							highlightGenre(d[0].genre, strokeColor);
+                        })
+                        .on("mouseout", function(d, i) {
+							highlightGenre(d[0].genre,"white");
+                        });
             }
 
             //---------------------- Kwartalen weergeven/deleten --------------------------
@@ -928,7 +972,7 @@
 
             function change() {
                 clearTimeout(timeout);
-
+				redoY0Stacked();
                 //deleteQsText(); // delete Qs from other views
                 yUpdateLabel();
 			
@@ -945,13 +989,23 @@
 					if(cs[i].checked){
 						cs[i].parentNode.style.backgroundColor = color(i);
 					} else {
-						cs[i].parentNode.style.backgroundColor = greys(i);
+						cs[i].parentNode.style.backgroundColor = grey;
 					}
+				}
+			}
+			
+			function highlightGenre(genre,color){
+				var cs = $("input:checkbox");
+				for(i = 0; i < cs.length; i++){
+					if(cs[i].value == genre){
+						cs[i].parentNode.style.border = "1px solid " + color;
+					} 
 				}
 			}
 			
 			function transitionCheckbox(){
 				colorChecks();
+				
 				// determine which graph we are dealing with
 				var graphList = $("input:radio");
 				var graph = "";
@@ -990,7 +1044,7 @@
                         .attr("width", x.rangeBand())
 						.style("fill", function(d, i, j) {
 							if(getChecked(d.genre)) {return color(j); }
-							else { return greys(j); }})
+							else { return grey; }})
 						.attr("fill-opacity", function(d) {
 							if(getChecked(d.genre)){ return 1}
 							else { return 1}})
@@ -1040,7 +1094,7 @@
                         .attr("d", function(d) { return line(d); })
 						.attr("stroke", function(d, i) {
 							if(getChecked(d[0].genre)) {return color(i); }
-							else { return greys(i); }})
+							else { return grey; }})
                         .attr("stroke-width", 2)
 						.attr("stroke-opacity", function(d) {
 							if(getChecked(d[0].genre)){return 1}
@@ -1084,11 +1138,14 @@
                         .attr("width", function(d){ 
 							if(getChecked(d.genre)){ return widthbar} 
 							else { return 0}})
+						.style("fill", function(d, i, j) {
+							if(getChecked(d.genre)) {return color(j); }
+							else { return grey; }})
                         .transition()
                         .attr("y", function(d) { return y(d.y); })
                         .attr("height", function(d) { return height - y(d.y); });
 
-                var sizeText = widthbar-2;
+                var sizeText = widthbar/2;
 
                 barNumbersText.transition()
                         .duration(400)
@@ -1114,7 +1171,32 @@
             }
 			
 			function redoY0Stacked(){
-				
+				var genreOrder = [];
+				var boxes = $("input:checkbox");
+				for(var i = 0; i < boxes.length; i++){
+					if(boxes[i].checked){
+						genreOrder.push(boxes[i].value);	
+					}
+				}
+				for(var i = 0; i < boxes.length; i++){
+					if(!boxes[i].checked){
+						genreOrder.push(boxes[i].value);	
+					}
+				}
+				//console.log(genreOrder);
+				var newDataYear = []; // create new object!
+				// switch element 0 and 'layer' --> move layer to bottom
+				for(var i = 0; i < genreOrder.length; i++){
+					var index = 0;
+					for(var j = 0; j < genreOrder.length; j++){
+						if(genreOrder[i] == dataYear[j].genre){
+							index = j;
+						}
+					}
+					newDataYear.push(dataYear[index]);
+				}
+				updateLayerStack(newDataYear);
+				return newDataYear;
 			}
 			
             function transitionStacked() {
@@ -1128,8 +1210,6 @@
 						if(getChecked(d.genre)) {return d.y0 + d.y; } else { return 0; }}); });
                 newYAxis(yStackMaxYear);
 				
-				redoY0Stacked();
-				
                 rect.transition()
                         .duration(600)
                         .delay(function(d, i) { return i * 10; })
@@ -1142,6 +1222,9 @@
                         .transition()
                         .attr("x", function(d) { return x(d.x); })
                         .attr("width", x.rangeBand())
+						.style("fill", function(d, i, j) {
+							if(getChecked(d.genre)) {return color(j); }
+							else { return grey; }})
 						.attr("fill-opacity", function(d) {
 							if(getChecked(d.genre)){ return 1}
 							else { return 1}})
