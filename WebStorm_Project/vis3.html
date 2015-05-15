@@ -95,16 +95,21 @@
 <div id="id01"></div>
 
 <script>
+	var genres = ["Action","Indie","Strategy","Adventure","Simulation","Casual","RPG","Free to Play","Early Access","Massively Multiplayer","Racing","Sports","Education"];
 //    $.getJSON("data1-1600.json", function(json) {
-    $.getJSON("data1-16387.json", function(json) {
+    $.getJSON("newData.json", function(json) {
 //        console.log("JSON data");
 //        console.log(json); // this will show the info it in firebug console
 
-        var genres = [];
-        var dataQs = combineAndSortGenresAndDates(json, genres);
+        
+        	
+		var dataQs = combineAndSortGenresAndDates(json, genres);
         var dataYear = FromQsToYears(dataQs);
-	
-        visualise(dataQs, dataYear, genres);
+		console.log(dataYear);
+		var dlurl = 'data:text/json;charset=utf8,' + encodeURIComponent(JSON.stringify(dataYear));
+		     			window.open(dlurl, '_blank');
+		     			window.focus();
+        //visualise(dataQs, dataYear, genres);
     });
 	
 	function getChecked(genre){
@@ -121,34 +126,58 @@
         // Melvin code 2
         var all_genres = [];
         var found;
-        for (var it1 = 0; it1 < json.length; it1++) {
+		for(var i = 0; i < genres.length; i++){
+			for(var year = 2005; year <= 2015; year++){
+				for(var month = 1; month <= 12; month++){
+						all_genres.push({
+									"name":genres[i],
+									"amount":0,
+									"month":month,
+									"year":year
+						});
+				}
+			}
+		}
+		
+        for (var it1 = 0; it1 < json.length; it1++) { // 
             var game = json[it1].genres;
             var date = json[it1].releaseDate;
             var date_array = date.split(" ");
-            var month = date_array[1];
-            var year = date_array[2];
+            var month = MonthtoNum(date_array[1]);
+            var year = parseInt(date_array[2]);
 
             for (var it2 = 0; it2 < game.length; it2++) {
                 var genre = game[it2].description;
                 //search the current genre in the list of the genres already counted, when found increase it's counter by 1
                 found = false;
-                for (var it3 = 0; it3 < all_genres.length && !found; it3++) {
-                    if (all_genres[it3].name.localeCompare(genre) == 0 && year == all_genres[it3].year && month == all_genres[it3].month) {
+				var counter = 0;
+                for (var it3 = 0; it3 < all_genres.length && !found; it3++) { // all_genres.length
+					/*console.log(all_genres[it3].name);
+					console.log(genre);
+					console.log(year);
+					console.log(all_genres[it3].year);
+					console.log(MonthtoNum(month));
+					console.log(all_genres[it3].month);*/
+					counter++;
+                    if (all_genres[it3].name == genre && year == all_genres[it3].year && month == all_genres[it3].month) {
                         all_genres[it3].amount++;
                         found = true;
+						//console.log("added " + counter);
+						//console.log(genre + " " + year + " " + month);
                     }
                 }
                 //if the genre is not found in the array, make a new entry and put it's counter on 1
-                if (!found) {
+                /*if (!found) {
                     all_genres.push({
                         "name":genre,
                         "amount":1,
                         "month":month,
                         "year":year
                     });
-                }
+                }*/
             }
         }
+		//console.log(all_genres);
         all_genres.sort(function (a, b) {
             if (a.year > b.year) {
                 return -1;
@@ -236,7 +265,7 @@
         // put the names of the genres in a list
         for (var i = 0; i < data.length; i++) {
             genres.push(data[i].genre);
-			console.log(data[i].genre);
+			//console.log(data[i].genre);
 			// add checkbox per genre
 			/*var label = document.createElement("LABEL");
 			label.innerHTML = data[i].genre;
@@ -296,7 +325,38 @@
 
         //divide the months in Q's and add the missing ones
         var dataQs = [];
-        for (var genreIt = 0; genreIt < data.length; genreIt++) {
+		for(var i = 0; i < genres.length; i++){
+			var newGames = [];
+			var genreTotal = 0;
+			for(var year = 2005; year <= 2015; year++){
+				for(var quart = 1; quart <= 4; quart++){
+					newGames.push({
+                        x: year,
+                        q: quart,
+                        y: 0
+                    });
+				}
+			}
+			for(var j = 0; j < all_genres.length; j++){
+				if(all_genres[j].name == genres[i]){
+					for(var k = 0; k < newGames.length; k++){
+						if(all_genres[j].year == newGames[k].x){
+							if(MonthToQ(all_genres[j].month) == newGames[k].q){
+								newGames[k].y += all_genres[j].amount;
+								genreTotal += all_genres[j].amount;
+							}
+						}
+					}
+				}
+			}
+			dataQs.push({
+                games: newGames,
+                total: genreTotal,
+                genre: genres[i]
+            });
+		}
+		
+        /*for (var genreIt = 0; genreIt < data.length; genreIt++) {
             var length = data[genreIt].games.length;
             var newGames = [];
             var prevYear = 2005;
@@ -328,7 +388,7 @@
                 total: data[genreIt].total,
                 genre: data[genreIt].genre
             });
-        }
+        }*/
 
         /*            console.log("Data");
          console.log(data);
@@ -378,60 +438,55 @@
     /**
      * @return {number}
      */
-    function MonthtoNum(name) {
-        var n;
+    function MonthtoNum(n) {
         var numMonth = 1;
-        n = name.localeCompare("Jan,")
-        if(n == 0)
+        if(n == "Jan,")
             return numMonth;
         numMonth++;
-        n = name.localeCompare("Feb,")
-        if(n == 0)
+        if(n == "Feb,")
             return numMonth;
         numMonth++;
-        n = name.localeCompare("Mar,")
-        if(n == 0)
+        if(n == "Mar,")
             return numMonth;
         numMonth++;
-        n = name.localeCompare("Apr,")
-        if(n == 0)
+        if(n == "Apr,")
             return numMonth;
         numMonth++;
-        n = name.localeCompare("May,")
-        if(n == 0)
+        if(n == "May,")
             return numMonth;
         numMonth++;
-        n = name.localeCompare("Jun,")
-        if(n == 0)
+        if(n == "Jun,")
             return numMonth;
         numMonth++;
-        n = name.localeCompare("Jul,")
-        if(n == 0)
+        if(n == "Jul,")
             return numMonth;
         numMonth++;
-        n = name.localeCompare("Aug,")
-        if(n == 0)
+        if(n == "Aug,")
             return numMonth;
         numMonth++;
-        n = name.localeCompare("Sep,")
-        if(n == 0)
+        if(n == "Sep,")
             return numMonth;
         numMonth++;
-        n = name.localeCompare("Oct,")
-        if(n == 0)
+        if(n == "Oct,")
             return numMonth;
         numMonth++;
-        n = name.localeCompare("Nov,")
-        if(n == 0)
+        if(n == "Nov,")
             return numMonth;
         numMonth++;
-        n = name.localeCompare("Dec,")
-        if(n == 0)
+        if(n == "Dec,")
             return numMonth;
     }
 
     function MonthToQ(x) {
-        return (((x-1) - (x-1)%3) / 3)+1
+		if(x <= 3){
+		return 1;
+		} else if (x <=6){
+		return 2;
+		} else if (x <= 9){
+		return 3;
+		} else {
+		return 4;
+		}
     }
 	
     //////////////// VISUALIZATION

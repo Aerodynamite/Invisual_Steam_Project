@@ -51,6 +51,13 @@
             right: -250px;
             top: 80px;
 		}
+		
+		#info {
+			position: absolute;
+            left: 100px;
+            bottom: -50px;
+			font: 9px sans-serif;
+		}
     </style>
 
 </head>
@@ -76,21 +83,12 @@
 	<label title="Early Access" id="Early Access"><input type="checkbox" name="genre" value="Early Access">Early Access</label><br>
 	<label title="Racing" id="Racing"><input type="checkbox" name="genre" value="Racing">Racing</label><br>
 	<label title="Sports" id="Sports"><input type="checkbox" name="genre" value="Sports">Sports</label><br>
-	<label title="Design & Illustration" id="Design & Illustration"><input type="checkbox" name="genre" value="Design & Illustration">Design & Illustration</label><br>
-	<label title="Web Publishing" id="Web Publishing"><input type="checkbox" name="genre" value="Web Publishing">Web Publishing</label><br>
-	<label title="Utilities" id="Utilities"><input type="checkbox" name="genre" value="Utilities">Utilities</label><br>
-	<label title="Audio Production" id="Audio Production"><input type="checkbox" name="genre" value="Audio Production">Audio Production</label><br>
-	<label title="Animation & Modeling" id="Animation & Modeling"><input type="checkbox" name="genre" value="Animation & Modeling">Animation & Modeling</label><br>
 	<label title="Education" id="Education"><input type="checkbox" name="genre" value="Education">Education</label><br>
-	<label title="Software Training" id="Software Training"><input type="checkbox" name="genre" value="Software Training">Software Training</label><br>
-	<label title="Video Production" id="Video Production"><input type="checkbox" name="genre" value="Video Production">Video Production</label><br>
-	<label title="Photo Editing" id="Photo Editing"><input type="checkbox" name="genre" value="Photo Editing">Photo Editing</label><br>
-	<label title="Accounting" id="Accounting"><input type="checkbox" name="genre" value="Accounting">Accounting</label>
 </form>
 
 <body>
 
-<h1> Stream Trends </h1>
+<h1> Steam Trends </h1>
 
 <div id="id01"></div>
 
@@ -103,7 +101,7 @@
 		var dataQs = {};
 		var dataYear = {};
 		
-    	$.getJSON("data1-16387.json", function(json) {
+    	$.getJSON("newData.json", function(json) {
 			var data = json;
 			$.getJSON("genres.json", function(genreData) {
 				var genres = genreData;
@@ -136,17 +134,16 @@
 				
 				label.mouseover(function () {
 					console.log(label);
-					$(this).style.border = "1px solid blue";
+					$(this).style.border = "1px solid " + highlight;
 					d3.selectAll("rect")
 						.style("stroke", function (e, k, l) {
-							return label.title == e.genre ? "blue" : null;
+							return label.title == e.genre ? highlight : null;
 						})
 				});
 				label.mouseout(function () {
-					//label.style.border = "1px solid white";
 					d3.selectAll("rect")
 						.style("stroke", function (e, k, l) {
-							return label.title == e.genre ? "white" : null;
+							return null;
 						})
 				});
 			});
@@ -507,7 +504,9 @@
                 var color = d3.scale.ordinal()
                         .range(colorArray);
 				
-				var grey = "#CCCCCC";
+				var grey = "#DBDBDB";
+				
+				var highlight = "#BC2DCF";
 				
                 // d3 horizontal and vertical scale variables
                 var x = 0,
@@ -530,7 +529,7 @@
                 // Bars quantity number text
                 var barNumbersText = 0,
                         maxSizeText = 70;
-
+							minSizeText = 5;
                 // Grouped
                 var yGroupMaxYear = 0;
 
@@ -737,15 +736,14 @@
                         .attr("height", 0)
                         .on("click", barClick)
                         .on("mouseover", function(d, i, j) {
-                            var strokeColor = "blue";
-							highlightGenre(d.genre, strokeColor);
+							highlightGenre(d.genre, highlight);
                             layer.selectAll("rect")
                                     .style("stroke", function (e, k, l) {
-                                        return j == l ? strokeColor : null;
+                                        return j == l ? highlight : null;
                                     })
                         })
                         .on("mouseout", function(d, i, j) {
-							highlightGenre(d.genre,"white");
+							highlightGenre(d.genre,null);
                             layer.selectAll("rect")
                                     .style("stroke", function (e, k, l) {
                                         return j == l ? null : 0;
@@ -808,7 +806,15 @@
                         .attr("x", function(d) { return x(d.x) + x.rangeBand()/2-(maxSizeText * d.y/yStackMaxYear)/2;})
                         .attr("y", height)
                         .text(function(d) { return d.y })
-                        .style("font-size", function(d) {return maxSizeText * d.y/yStackMaxYear + "px"})
+                        .style("font-size", function(d) {
+							var size = maxSizeText * d.y/yStackMaxYear;
+							if(size > maxSizeText){
+								return maxSizeText + "px";
+							} else if (size < minSizeText){
+								return 0 + "px";
+							} else {
+								return size + "px";
+							}})
                         .attr("fill", "black");
 
                 // TODO: move this to appropriate place
@@ -829,7 +835,15 @@
                         .attr("y", function(d) { return y(d.y0 + d.y)+(y(d.y0) - y(d.y0 + d.y))/2 + (maxSizeText * d.y/maxgroup)/2; })
                         .transition()
                         .duration(400)
-                        .style("font-size", function(d) {return maxSizeText * d.y/maxgroup + "px"})
+						.style("font-size", function(d) {
+							var size =  maxSizeText * d.y/maxgroup;
+							if(size > maxSizeText){
+								return maxSizeText + "px";
+							} else if (size < minSizeText){
+								return 0 + "px";
+							} else {
+								return size + "px";
+							}})
                         .style("text-anchor", "middle");
             }
 
@@ -917,11 +931,10 @@
                         .attr("stroke-width", 0)
                         .attr("fill", "none")
 						.on("mouseover", function(d, i) {
-                            var strokeColor = "blue";
-							highlightGenre(d[0].genre, strokeColor);
+							highlightGenre(d[0].genre, highlight);
                         })
                         .on("mouseout", function(d, i) {
-							highlightGenre(d[0].genre,"white");
+							highlightGenre(d[0].genre,null);
                         });
             }
 
@@ -998,7 +1011,11 @@
 				var cs = $("input:checkbox");
 				for(i = 0; i < cs.length; i++){
 					if(cs[i].value == genre){
-						cs[i].parentNode.style.border = "1px solid " + color;
+						if(color == null){
+							cs[i].parentNode.style.border = null;
+						} else {
+							cs[i].parentNode.style.border = "1px solid " + color;
+						}
 					} 
 				}
 			}
@@ -1066,8 +1083,18 @@
                         .transition()
                         .duration(400)
                         .style("font-size", function(d,i) {
-							if(getChecked(d.genre)){return Math.min(maxSizeText, (d.y / amountGamesYear[i])*100) + "px"}
-							else { return 0 + "px"}})
+							if(getChecked(d.genre)){
+								var size = Math.min(maxSizeText, (d.y / amountGamesYear[i])*100);
+								if(size > maxSizeText){
+									return maxSizeText + "px";
+								} else if (size < minSizeText){
+									return 0 + "px";
+								} else {
+									return size + "px";
+								}
+							} else { 
+								return 0 + "px";
+							}})
                         .style("text-anchor", "middle");
             }
 
@@ -1130,7 +1157,7 @@
 								if(getChecked(d.genre)) {
 									drawn++;
 								}
-								if(j==21){
+								if(j==genres.length-1){
 									drawn = 0;
 								}
 							}
@@ -1151,12 +1178,13 @@
                         .duration(400)
                         .delay(function(d, i) { return i * 10; })
                         .attr("x", function(d, i, j) { 
+							//console.log(d);
 							var value = x(d.x) + x.rangeBand() / c * drawn + widthbar/2;
 							if(i==10) {
 								if(getChecked(d.genre)) {
 									drawn++;
 								}
-								if(j==21){
+								if(j==genres.length-1){
 									drawn = 0;
 								}
 							}
@@ -1165,8 +1193,18 @@
                         .text(function(d) { return d.y })
                         .transition().duration(400)
                         .style("font-size", function(d) {
-							if(getChecked(d.genre)){ return sizeText + "px"}
-							else { return 0 + "px"}})
+							if(getChecked(d.genre)){
+								var size =  sizeText;
+								if(size > maxSizeText){
+									return maxSizeText + "px";
+								} else if (size < minSizeText){
+									return 0 + "px";
+								} else {
+									return size + "px";
+								}
+							} else { 
+								return 0 + "px";
+							}})
                         .style("text-anchor", "middle");
             }
 			
@@ -1247,8 +1285,18 @@
                         .transition()
                         .duration(400)
                         .style("font-size", function(d) {
-							if(getChecked(d.genre)){return maxSizeText * d.y/maxgroup + "px"}
-							else { return 0 + "px"}})
+							if(getChecked(d.genre)){
+								var size =   maxSizeText * d.y/maxgroup;
+								if(size > maxSizeText){
+									return maxSizeText + "px";
+								} else if (size < minSizeText){
+									return 0 + "px";
+								} else {
+									return size + "px";
+								}
+							} else { 
+								return 0 + "px";
+							}})
                         .style("text-anchor", "middle");
 
             }
@@ -1296,6 +1344,11 @@
         //
 
     </script>
+
+<div id="info">
+	 <label>Data last updated on 14/05/2015</label><br>
+	 <a href="http://steampowered.com" target="_blank">Powered by Steam</a>
+</div>
 
 </body>
 </html>

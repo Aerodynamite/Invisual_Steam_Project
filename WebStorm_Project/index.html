@@ -57,7 +57,7 @@
         var notWorkingIDs = [];
         var combinedSorted = [];
 		
-        var index = 4101;
+        var index = 1001;
 		var jsonString = "";
 		var dataToBeStored = [];
         // EXAMPLE USAGES
@@ -122,10 +122,10 @@
             // A LOT WILL FAIL IF THERE ARE TOO MANY IDs
 //            getAllGenres();  
 			var myTimer = setInterval(function () {
-				getSomeGenres(index, index+99, 1);
+				getSomeGenres(index, index+1500, 150);
 				  index = index + 100;
 		          console.log("index:" + index);
-		          if(index > 5000){ 
+		          if(index > 2500){ 
 		          		console.log("ended last series");
 		            	var dlurl = 'data:text/json;charset=utf8,' + encodeURIComponent(jsonString);
 		     			window.open(dlurl, '_blank');
