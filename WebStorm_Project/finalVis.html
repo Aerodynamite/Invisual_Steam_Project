@@ -1,0 +1,1372 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+    <title>Invisual Project</title>
+	<META http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+	<script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+    <script src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
+    <script src="data1-1600.json"></script>
+
+    <style>
+        body {
+            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+            margin: auto;
+            position: relative;
+            width: 960px;
+        }
+        text {
+            font: 10px sans-serif;
+        }
+        .axis path {
+            display: none;
+        }
+
+        .axis line {
+            shape-rendering: crispEdges;
+            stroke: #000;
+        }
+
+        .axis .minor line {
+            stroke: #777;
+            stroke-dasharray: 5,4;
+        }
+		
+		#radio {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+        }
+
+        /*Legend*/
+        .legend {
+            font-size: 14px; /* doet niks blijkbaar ma kweni waarom #goeieTutorial */
+        }
+        rect {
+            stroke-width: 2;
+        }
+		
+		#checks {
+			position: absolute;
+            right: -250px;
+            top: 80px;
+		}
+		
+		#info {
+			position: absolute;
+            left: 100px;
+            bottom: -50px;
+			font: 9px sans-serif;
+		}
+    </style>
+
+</head>
+
+<form id="radio">
+    <label><input type="radio" name="mode" value="grouped"> Grouped</label>
+    <label><input type="radio" name="mode" value="relative"> Stacked (relative) </label>
+    <label><input type="radio" name="mode" value="stacked" checked> Stacked (absolute)</label>
+    <label><input type="radio" name="mode" value="compare"> Compare</label>
+</form>
+
+<form id="checks"> 
+	<label> Select your genres </label><br><br>
+	<label title="Action" id="Action" onmouseover="mouseOver(this)" onmouseout="mouseOut(this)"><input type="checkbox" name="genre" value="Action" checked >Action</label><br>
+	<label title="Indie" id="Indie" onmouseover="mouseOver(this)" onmouseout="mouseOut(this)"><input type="checkbox" name="genre" value="Indie" checked>Indie</label><br>
+	<label title="Strategy" id="Strategy" onmouseover="mouseOver(this)" onmouseout="mouseOut(this)"><input type="checkbox" name="genre" value="Strategy" checked>Strategy</label><br>
+	<label title="Adventure" id="Adventure" onmouseover="mouseOver(this)" onmouseout="mouseOut(this)"><input type="checkbox" name="genre" value="Adventure" checked>Adventure</label><br>
+	<label title="Simulation" id="Simulation" onmouseover="mouseOver(this)" onmouseout="mouseOut(this)"><input type="checkbox" name="genre" value="Simulation" checked>Simulation</label><br>
+	<label title="Casual" id="Casual" onmouseover="mouseOver(this)" onmouseout="mouseOut(this)"><input type="checkbox" name="genre" value="Casual">Casual</label><br>
+	<label title="RPG" id="RPG" onmouseover="mouseOver(this)" onmouseout="mouseOut(this)"><input type="checkbox" name="genre" value="RPG">RPG</label><br>
+	<label title="Free to Play" id="Free to Play" onmouseover="mouseOver(this)" onmouseout="mouseOut(this)"><input type="checkbox" name="genre" value="Free to Play">Free to Play</label><br>
+	<label title="Early Access" id="Early Access" onmouseover="mouseOver(this)" onmouseout="mouseOut(this)"><input type="checkbox" name="genre" value="Early Access">Early Access</label><br>
+	<label title="Massively Multiplayer" id="Massively Multiplayer" onmouseover="mouseOver(this)" onmouseout="mouseOut(this)"><input type="checkbox" name="genre" value="Massively Multiplayer">Massively Multiplayer</label><br>
+	<label title="Racing" id="Racing" onmouseover="mouseOver(this)" onmouseout="mouseOut(this)"><input type="checkbox" name="genre" value="Racing">Racing</label><br>
+	<label title="Sports" id="Sports" onmouseover="mouseOver(this)" onmouseout="mouseOut(this)"><input type="checkbox" name="genre" value="Sports">Sports</label><br>
+	<label title="Education" id="Education" onmouseover="mouseOver(this)" onmouseout="mouseOut(this)"><input type="checkbox" name="genre" value="Education">Education</label><br>
+</form>
+
+<body>
+
+<h1> Steam Trends </h1>
+
+<div id="id01"></div>
+
+    <script>
+
+        displayLoadingScreen();
+		
+		var data = {};
+		var genres = [];
+		var dataQs = {};
+		var dataYear = {};
+		
+    	$.getJSON("newData.json", function(json) {
+			var data = json;
+			$.getJSON("genres.json", function(genreData) {
+				var genres = genreData;
+				$.getJSON("dataQs.json", function(qData) {
+					var dataQs = qData;
+					$.getJSON("dataYears.json", function(yearData) {
+						var dataYear = yearData;
+						
+						removeLoadingScreen();
+	
+						visualise(dataQs, dataYear, genres);
+					});
+				});
+			});
+		});
+
+		function getChecked(genre){
+			var boxes = $("input:checkbox");
+			for(var i = 0; i < boxes.length; i++){
+				if(boxes[i].value == genre){
+					return boxes[i].checked;	
+				}
+			}
+		}
+
+        function displayLoadingScreen() {
+            var svg = d3.select("body")
+                    .append("svg")
+                    .attr("id","the_SVG_ID")
+                    .attr("width", 1024)
+                    .attr("height", 512)
+                    .append("g")
+                    .append("text")
+                    .attr("x", 500)
+                    .attr("y", 256)
+                    .attr("class", "loadingText")
+                    .text("Visualisation is loading. Please do not power off or unplug your machine.")
+                    .style("text-anchor", "middle")
+                    .style("font-size", 24);
+
+            return svg;
+        }
+
+        function removeLoadingScreen(svg) {
+            d3.select("#the_SVG_ID").remove();
+        }
+
+        // genres is used to RETURN the genres
+        function combineAndSortGenresAndDates(json, genres) {
+            // Melvin code 2
+            var all_genres = [];
+            var found;
+            for (var it1 = 0; it1 < json.length; it1++) {
+                var game = json[it1].genres;
+                var date = json[it1].releaseDate;
+                var date_array = date.split(" ");
+                var month = date_array[1];
+                var year = date_array[2];
+
+                for (var it2 = 0; it2 < game.length; it2++) {
+                    var genre = game[it2].description;
+                    //search the current genre in the list of the genres already counted, when found increase it's counter by 1
+                    found = false;
+                    for (var it3 = 0; it3 < all_genres.length && !found; it3++) {
+                        if (all_genres[it3].name.localeCompare(genre) == 0 && year == all_genres[it3].year && month == all_genres[it3].month) {
+                            all_genres[it3].amount++;
+                            found = true;
+                        }
+                    }
+                    //if the genre is not found in the array, make a new entry and put it's counter on 1
+                    if (!found) {
+                        all_genres.push({
+                            "name":genre,
+                            "amount":1,
+                            "month":month,
+                            "year":year
+                        });
+                    }
+                }
+            }
+            all_genres.sort(function (a, b) {
+                if (a.year > b.year) {
+                    return -1;
+                }
+                if (a.year < b.year) {
+                    return 1;
+                }
+                // a must be equal to b
+                return 0;});
+
+            all_genres.sort(function (a, b) {
+                if (a.month > b.month) {
+                    return -1;
+                }
+                if (a.month < b.month) {
+                    return 1;
+                }
+                // a must be equal to b
+                return 0;});
+
+//            console.log("Melvin object");
+//            console.log(all_genres);
+
+ 		    // convert to suitable object for visualisation
+            var data = [];
+            for (var i = 0; i < all_genres.length; i++) {
+                var genre = all_genres[i].name;
+                var month = all_genres[i].month;
+                var year = parseInt(all_genres[i].year);
+                var amount = all_genres[i].amount;
+
+                if (!isNaN(year)) { // make sure the year is a number
+
+                    // if genre already in data, it has been handled before
+                    var found = false;
+                    for (var j = 0; j < data.length; j++) {
+                        if (data[j].genre == genre) {
+                            found = true;
+                        }
+                    }
+
+                    if (!found) {
+                        // Add current year to data
+                        data.push({
+                            games: [
+                                {
+                                    x: year,
+                                    x0: month,
+                                    y: amount
+                                }
+                            ],
+                            total: amount,
+                            genre: genre
+                        });
+
+                        // search the current genre in future years of all_genres
+                        // start from next position in i, to avoid double counting
+                        for (var j = i + 1; j < all_genres.length; j++) {
+                            if (all_genres[j].name == genre) {
+                                var newYear = parseInt(all_genres[j].year);
+                                if (!isNaN(newYear)) {
+                                    var newMonth = all_genres[j].month;
+                                    var newAmount = all_genres[j].amount;
+                                    data[data.length - 1].games.push({x: newYear, x0:newMonth, y: newAmount});
+                                    data[data.length - 1].total += newAmount;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // sort the genres from most games to least games
+            data.sort(function (a, b) {
+                if (a.total > b.total) {
+                    return -1;
+                }
+                if (a.total < b.total) {
+                    return 1;
+                }
+                // a must be equal to b
+                return 0;}
+            );
+
+            // put the names of the genres in a list
+            for (var i = 0; i < data.length; i++) {
+                genres.push(data[i].genre);
+            }
+
+            // sort the games of each genre from old to new using year and month
+            for (var genre = 0; genre < data.length; genre++) {
+                data[genre].games.sort(function (a, b) {
+                    if (a.x < b.x)
+                        return -1;
+                    if (a.x > b.x)
+                        return 1;
+                    if(a.x == b.x) {
+                        var ma = MonthtoNum(a.x0);
+                        var mb = MonthtoNum(b.x0);
+                        if (ma < mb)
+                            return -1;
+                        if (ma > mb)
+                            return 1;
+                    }
+                    return 0;
+                });
+            }
+
+            /*// add the missing years + months to each genre
+            for (var genre = 0; genre < data.length; genre++) {
+                var newGames = [];
+                var prevYear = 1997;
+                for (var year = 0; prevYear < 2015; ) {
+                    // if the current existing year, isn't the successor of the previous year
+                    if (year < data[genre].games.length && data[genre].games[year].x > prevYear + 1
+                        || year >= data[genre].games.length && prevYear < 2015) {
+                        // add the year to the array with a count of 0 games
+                        newGames.push({
+                            x: prevYear+1,
+                            x0:
+                            y: 0
+                        });
+                    }
+                    else { // current year is the successor
+                        // add to array
+                        newGames.push(data[genre].games[year]);
+                        year++; // go to next year in existing array
+                    }
+                    prevYear++;
+                }
+                data[genre].games = newGames;
+            }*/
+
+            //divide the months in Q's and add the missing ones
+            var dataQs = [];
+            for (var genreIt = 0; genreIt < data.length; genreIt++) {
+                var length = data[genreIt].games.length;
+                var newGames = [];
+                var prevYear = 2005;
+                var prevQ;
+
+                var yearIt = 0;
+                //because we skip a couple of years in the graph we also need to skip a couple of years in the games array
+                while(yearIt < length && data[genreIt].games[yearIt].x < 2005)yearIt++;
+
+                while (prevYear <= 2015) {
+                    prevQ = 1;
+                    while (prevQ < 5) {
+                        newGames.push({
+                            x: prevYear,
+                            q: prevQ,
+                            y: 0
+                        });
+
+                        while (yearIt < length && MonthToQ(MonthtoNum(data[genreIt].games[yearIt].x0)) == prevQ && data[genreIt].games[yearIt].x == prevYear) {
+                            newGames[(prevQ-1) + (prevYear-2005)*4].y += data[genreIt].games[yearIt].y;
+                            yearIt++;
+                        }
+                        prevQ++;
+                    }
+                    prevYear++;
+                }
+                dataQs.push({
+                    games: newGames,
+                    total: data[genreIt].total,
+                    genre: data[genreIt].genre
+                });
+            }
+
+/*            console.log("Data");
+            console.log(data);
+            console.log("Data Q's");
+            console.log(dataQs);*/
+
+            return dataQs;
+        }
+
+        function FromQsToYears(dataQs) {
+            //simplify the data (filter out the months)
+            var dataYears = [];
+
+            for (var genreIt = 0; genreIt < dataQs.length; genreIt++) {
+                var newGames = [];
+                var prevYear = 2005;
+
+                var yearIt = 0;
+                while (prevYear <= 2015) {
+                    newGames.push({
+                        x: prevYear,
+                        y: 0
+                    });
+
+                    var prevQ = 1;
+                    while (prevQ < 5) {
+                        newGames[yearIt].y += dataQs[genreIt].games[yearIt * 4 + (prevQ - 1)].y;
+                        prevQ++;
+                    }
+                    yearIt++;
+                    prevYear++;
+                }
+                dataYears.push({
+                    games: newGames,
+                    total: dataQs[genreIt].total,
+                    genre: dataQs[genreIt].genre
+                });
+            }
+
+/*            console.log("dataYears");
+            console.log(dataYears);*/
+
+            return dataYears;
+        }
+
+
+        /**
+         * @return {number}
+         */
+        function MonthtoNum(name) {
+            var n;
+            var numMonth = 1;
+            n = name.localeCompare("Jan,")
+            if(n == 0)
+                return numMonth;
+            numMonth++;
+            n = name.localeCompare("Feb,")
+            if(n == 0)
+                return numMonth;
+            numMonth++;
+            n = name.localeCompare("Mar,")
+            if(n == 0)
+                return numMonth;
+            numMonth++;
+            n = name.localeCompare("Apr,")
+            if(n == 0)
+                return numMonth;
+            numMonth++;
+            n = name.localeCompare("May,")
+            if(n == 0)
+                return numMonth;
+            numMonth++;
+            n = name.localeCompare("Jun,")
+            if(n == 0)
+                return numMonth;
+            numMonth++;
+            n = name.localeCompare("Jul,")
+            if(n == 0)
+                return numMonth;
+            numMonth++;
+            n = name.localeCompare("Aug,")
+            if(n == 0)
+                return numMonth;
+            numMonth++;
+            n = name.localeCompare("Sep,")
+            if(n == 0)
+                return numMonth;
+            numMonth++;
+            n = name.localeCompare("Oct,")
+            if(n == 0)
+                return numMonth;
+            numMonth++;
+            n = name.localeCompare("Nov,")
+            if(n == 0)
+                return numMonth;
+            numMonth++;
+            n = name.localeCompare("Dec,")
+            if(n == 0)
+                return numMonth;
+        }
+
+        function MonthToQ(x) {
+            return (((x-1) - (x-1)%3) / 3)+1
+        }
+
+        //////////////// VISUALIZATION
+        function visualise(dataQs, dataYear, genres) {
+            /*console.log("dataQs");
+            console.log(dataQs);
+            console.log("dataYear");
+            console.log(dataYear);
+            console.log("genres");
+            console.log(genres);*/
+
+//--------------------------- General visualisation stuff -------------------------
+            // Variables
+            // brackets zodat ik die hoop hier kan toeklappen in mijn IDE :P sorry als het u stoort
+            {
+                // General
+                var margin = {top: 40, right: 100, bottom: 40, left: 80},
+                        width = 1054 - margin.left - margin.right,
+                        height = 520 - margin.top - margin.bottom;
+
+              
+				
+                /*var greyArray = ["#303030","#383838","#404040","#484848","#505050","#585858","#606060","#686868","#707070","#787878",
+								"#808080","#888888","#909090","#989898","#A0A0A0","#A8A8A8","#B0B0B0","#B8B8B8","#C0C0C0","#C8C8C8"];
+				*/ // no longer used 
+
+                // d3 horizontal and vertical scale variables
+                var x = 0,
+                        y = 0,
+                        xAxis = 0,
+                        yAxis = 0,
+                        gy = 0;
+
+                // General svg
+                var svg = d3.select("body").append("svg")
+                                .attr("width", width + margin.left + margin.right)
+                                .attr("height", height + margin.top + margin.bottom)
+                                .append("g")
+                                .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+                // Bars general
+                var layer = 0,
+                        rect = 0;
+
+                // Bars quantity number text
+                var barNumbersText = 0,
+                        maxSizeText = 70;
+							minSizeText = 7;
+                // Grouped
+                var yGroupMaxYear = 0;
+
+                // General stacked
+                var wasLine = false,
+                        layersYear = 0,
+                        amountGamesYear = [],
+                        n = genres.length; // amount of stacked layers // max = 22 // first 12 are useful
+
+                // Relative stacked
+                var yRelativeMax = 0;
+
+                // Absolute stacked
+                var yStackMaxYear = 0;
+
+                // Compare
+                var line,
+                        lines,
+                        lineinX,
+                        yCompareMax = 0,
+                        layersQ = 0;
+            }
+
+            {
+                initGrouped(dataYear.slice(0, n));
+                initStacked(dataYear.slice(0, n));
+                initRelative(dataYear.slice(0, n));
+                initCompare();
+                initView();
+                yInitLabel();
+                initBarNumbers();
+                //initLegend(genres);
+                initCompareLines(layersQ);
+				colorChecks();
+            }
+
+            // Functions
+            function xSetYearDomain() {
+                x = d3.scale.ordinal()
+                        .domain([2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015])
+                        .rangeRoundBands([0, width], .08);
+            }
+
+            function ySetStackedDomain() {
+                y = d3.scale.linear()
+                        .domain([0, yStackMaxYear])
+                        .range([height, 0]);
+            }
+
+            //----- y axis label text ----
+            function yInitLabel() {
+                var extraMargin = 20;
+                svg.append("text")
+                        .attr("class", "yLabel")
+                        .attr("x", - margin.left / 2 - extraMargin)
+                        .attr("y", 0)
+                        .text("yLabel");
+
+                yUpdateLabel();
+            }
+
+            function yUpdateLabel() {
+                var curView = d3.select('input[name="mode"]:checked').node().value;
+
+                if (curView === "grouped") svg.select(".yLabel").text("Amount");
+                else if(curView == "relative") svg.select(".yLabel").text("%");
+                else if(curView == "stacked") svg.select(".yLabel").text("Amount");
+                else if(curView == "compare") svg.select(".yLabel").text("Amount");
+            }
+            //-----
+
+            // Update the layer stack for the stacked bar charts according to the new data
+            function updateLayerStack(data) {
+                var stack = d3.layout.stack(),
+                        genreCounter = 0;
+
+                layersYear = stack(d3.range(n).map(function () {
+                    var ret = data[genreCounter].games;
+					for(var i = 0; i < ret.length; i++){
+						ret[i].genre = data[genreCounter].genre;
+					}
+                    genreCounter = genreCounter + 1;
+                    return ret;
+                }));
+            }
+
+//--------------------------- Grouped view  -------------------------
+            function initGrouped(data) {
+                updateLayerStack(data);
+
+                yGroupMaxYear = d3.max(layersYear, function(layer) { return d3.max( layer, function(d) { return d.y; }); });
+                xSetYearDomain();
+                ySetStackedDomain();
+            }
+
+            function updateGrouped(data) {
+                initGrouped(data);
+
+                transitionGrouped();
+            }
+
+//--------------------------- Stacked view  -------------------------
+            function initStacked(data) {
+                updateLayerStack(data);
+
+                //boolean to check if we need to make a transition from line- to barchart
+                wasLine = false;
+
+                yStackMaxYear = d3.max(layersYear, function(layer) { return d3.max( layer, function(d) { return d.y0 + d.y; }); });
+
+                xSetYearDomain();
+                ySetStackedDomain();
+            }
+
+            function updateStacked(data) {
+                initStacked(data);
+                transitionStacked();
+            }
+
+//--------------------------- Relative view  -------------------------
+            function initRelative(data) {
+                updateLayerStack(data);
+
+                amountGamesYear = [];
+                var amountYear = data[0].games.length;
+                var it = 0;
+                while (it < amountYear){
+                    amountGamesYear.push(0.00000000000000000001);
+                    it++;
+                }
+
+                for(var it1 in layersYear) {
+                    for(var it2 in layersYear[it1])
+                        amountGamesYear[it2] = amountGamesYear[it2] + layersYear[it1][it2].y;
+                }
+
+                xSetYearDomain();
+                yRelativeMax = 100; // y domain
+            }
+
+            function updateRelative(data) {
+                initRelative(data);
+                transitionRelative();
+            }
+
+//--------------------------- Init lines  -------------------------
+            // ik zou dit in het begin van de initCompareLines functie willen zetten maar om de een of andere
+            // mysterieuze reden werkt dat niet dan.
+            function initCompare() {
+                var genreCounter = 0,
+                        stack = d3.layout.stack();
+
+                layersQ = stack(d3.range(n).map(function () {
+                    var ret = dataQs[genreCounter].games;
+					for(var i = 0; i < ret.length; i++){
+						ret[i].genre = dataQs[genreCounter].genre;
+					}
+                    genreCounter = genreCounter + 1;
+                    return ret;
+                }));
+
+                yCompareMax = d3.max(layersQ, function(layersQ) {return d3.max( layersQ,function(d) {return d.y; }); });
+            }
+
+            initCompare();
+
+            function updateCompare() {
+                // TODO
+            }
+
+//--------------------------- General visualisation stuff 2  --------
+
+            /*
+             console.log("layersYear");
+             console.log(layersYear);
+             console.log("layersQ");
+             console.log(layersQ);
+             */
+            function initView() {
+                xAxis = d3.svg.axis()
+                        .scale(x)
+                        .tickSize(0)
+                        .tickPadding(6)
+                        .orient("bottom");
+
+                yAxis = d3.svg.axis()
+                        .scale(y)
+                        .tickSize(-width)
+                        .tickPadding(2)
+                        .orient("left");
+
+                layer = svg.selectAll(".layer")
+                        .data(layersYear)
+                        .enter().append("g")
+                        .attr("class", "layer")
+                        .style("fill", function(d, i) { return color(i); });
+
+                rect = layer.selectAll("rect")
+                        .data(function(d) { return d; })
+                        .enter().append("rect")
+                        .attr("x", function(d) { return x(d.x); })
+                        .attr("y", height)
+                        .attr("width", x.rangeBand())
+                        .attr("height", 0)
+                        .on("click", barClick)
+                        .on("mouseover", function(d, i, j) {
+							highlightGenre(d.genre, highlight);
+                            layer.selectAll("rect")
+                                    .style("stroke", function (e, k, l) {
+                                        return j == l ? highlight : null;
+                                    })
+                        })
+                        .on("mouseout", function(d, i, j) {
+							highlightGenre(d.genre,null);
+                            layer.selectAll("rect")
+                                    .style("stroke", function (e, k, l) {
+                                        return j == l ? null : 0;
+                                    })
+                        });;
+
+                svg.append("g")
+                        .attr("class", "x axis")
+                        .attr("transform", "translate(0," + height + ")")
+                        .call(xAxis);
+
+                gy = svg.append("g")
+                        .attr("class", "y axis")
+                        .call(yAxis);
+
+                makeAxisMinor();
+            }
+
+            function barClick(rectObject, col, layerN) {
+				if(getChecked(rectObject.genre)){
+				console.log(rectObject);
+					var genreOrder = [];
+					var boxes = $("input:checkbox");
+					for(var i = 0; i < boxes.length; i++){
+						if(boxes[i].checked){
+							genreOrder.push(boxes[i].value);	
+						}
+					}
+					for(var i = 0; i < boxes.length; i++){
+						if(!boxes[i].checked){
+							genreOrder.push(boxes[i].value);	
+						}
+					}
+					var index = genreOrder.indexOf(rectObject.genre);;
+					var newDataYear = redoY0Stacked(); // create new object!
+					// switch element 0 and 'layer' --> move layer to bottom
+					console.log(index);
+					var temp = newDataYear[index];
+					newDataYear[index] = newDataYear[0];
+					newDataYear[0] = temp;
+
+					var curView = d3.select('input[name="mode"]:checked').node().value;
+					console.log(curView);
+
+					if (curView === "grouped") console.log("Not doing anything for now..");
+					else if(curView == "relative") updateRelative(newDataYear);
+					else if(curView == "stacked") updateStacked(newDataYear);
+					else if(curView == "compare") console.log("ERROR: WUT? Clicked bar in line graph?");
+
+					clearTimeout(timeout);
+				}
+            }
+
+//---------------------- Getallen in bars zetten --------------------------
+            function initBarNumbers() {
+                barNumbersText = layer.selectAll("text")
+                        .data(function(d) { return d; })
+                        .enter()
+                        .append("text")
+                        .attr("x", function(d) { return x(d.x) + x.rangeBand()/2-(maxSizeText * d.y/yStackMaxYear)/2;})
+                        .attr("y", height)
+                        .text(function(d) { return d.y })
+                        .style("font-size", function(d) {
+							var size = maxSizeText * d.y/yStackMaxYear;
+							if(size > maxSizeText){
+								return maxSizeText + "px";
+							} else if (size < minSizeText){
+								return 0 + "px";
+							} else {
+								return size + "px";
+							}})
+                        .attr("fill", "black");
+
+                // TODO: move this to appropriate place
+                rect.transition()
+                        .delay(function(d, i) { return i * 10; })
+                        .attr("y", function(d) { return y(d.y0 + d.y); })
+                        .attr("height", function(d) { return y(d.y0) - y(d.y0 + d.y); });
+
+                var sizeOneLetter = x.rangeBand()*1.8;
+                //the maximum size of a number must be limited to the width of the bar (the findMagnitude will determine how many numbers there can be max)
+                maxSizeText = sizeOneLetter/findMagnitudeNumber(yGroupMaxYear);
+
+                var maxgroup = yGroupMaxYear + yGroupMaxYear *.1;
+
+                barNumbersText.transition()
+                        .delay(function(d, i) { return i * 10; })
+                        .attr("x", function(d) { return x(d.x) + x.rangeBand()/2; })
+                        .attr("y", function(d) { return y(d.y0 + d.y)+(y(d.y0) - y(d.y0 + d.y))/2 + (maxSizeText * d.y/maxgroup)/2; })
+                        .transition()
+                        .duration(400)
+						.style("font-size", function(d) {
+							var size =  maxSizeText * d.y/maxgroup;
+							if(size > maxSizeText){
+								return maxSizeText + "px";
+							} else if (size < minSizeText){
+								return 0 + "px";
+							} else {
+								return size + "px";
+							}})
+                        .style("text-anchor", "middle");
+            }
+
+//----------------------legende maken-----------------------
+            function initLegend(data) {
+                var legendRectSize = 18;    // size of colored square
+                var legendSpacing = 4;      // spacing between entries
+
+                // create legend svg
+                var legend = svg.selectAll('.legend')
+                        .data(color.domain())
+                        .enter()
+                        .append('g')
+                        .attr('class', 'legend')
+                        .attr('transform', function (d, i) {
+                            var height = legendRectSize + legendSpacing;
+                            var horz = width + 10;
+                            var vert = i * height - 0;
+                            return 'translate(' + horz + ',' + vert + ')';
+                        });
+
+                // add the colored squares
+                legend.append('rect')
+                        .attr('width', legendRectSize)
+                        .attr('height', legendRectSize)
+                        .style('fill', color)
+                        .style('stroke', color)
+                        .on("click", legendClick);
+
+                // add the text of each entry
+                legend.append('text')
+                        .attr('x', legendRectSize + legendSpacing)
+                        .attr('y', legendRectSize - legendSpacing)
+                        .text(function (d) {
+                            return data[d];
+                        });
+            }
+
+            function legendClick(i) {
+                console.log(i); // outputs the index of the clicked legend item. (top = 0, bottom = n)
+            }
+
+//--------------------------- Compare lines aanmaken -------------------------
+            function initCompareLines(data) {
+
+                var nbQs = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,
+                    23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44];
+
+                var xq = d3.scale.ordinal()
+                        .domain(nbQs)
+                        .rangeRoundBands([0, width], .08);
+
+                var city = svg.selectAll(".city")
+                        .data(data)
+                        .enter().append("g")
+                        .attr("class", "city");
+
+
+                line = d3.svg.line()
+                        .interpolate("basis")
+                        .x(function (d) {
+                            return xq(d.q + (d.x - 2005) * 4);
+                        })
+                        .y(function (d) {
+                            return y(d.y);
+                        });
+
+                lineinX = d3.svg.line()
+                        .interpolate("basis")
+                        .x(function (d) {
+                            return xq(d.q + (d.x - 2005) * 4);
+                        })
+                        .y(function () {
+                            return height;
+                        });
+
+                lines = city.append("path")
+                        .attr("class", "line")
+                        .attr("d", function (d) {
+                            return lineinX(d);
+                        })
+                        .attr("stroke", function (d, i) {
+                            return color(i);
+                        })
+                        .attr("stroke-width", 0)
+                        .attr("fill", "none")
+						.on("mouseover", function(d, i) {
+							highlightGenre(d[0].genre, highlight);
+							d3.select(this).attr("stroke",highlight);
+                        })
+                        .on("mouseout", function(d, i) {
+							highlightGenre(d[0].genre,null);
+							if(getChecked(d[0].genre)){
+								d3.select(this).attr("stroke",color(i));
+							} else {
+								d3.select(this).attr("stroke",grey);
+							}
+                        });
+            }
+
+            //---------------------- Kwartalen weergeven/deleten --------------------------
+            // called from transitionLineGraph()
+            function initQsText() {
+                // Hier wel maar tot 43 want anders een Q teveel!
+                var nbQs = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,
+                    23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43];
+                var Qs = ["Q1", "Q2", "Q3", "Q4"];
+
+                var xq = d3.scale.ordinal()
+                        .domain(nbQs)
+                        .rangeRoundBands([0, width], .08);
+
+                for (var i = 0; i < nbQs.length; i++) {
+                    var temp = svg.append("text")
+                            .attr("class", "qs")
+                            .attr("x", xq(i))
+                            .attr("y", height + margin.bottom + 50)
+                            .text(Qs[i%4]);
+
+                    temp.transition()
+                            .duration(800)
+                            .delay(function(d, i) { return i * 10; })
+                            .attr("y", height + margin.bottom/2 + 5);
+                }
+            }
+
+            // called from change()
+            function deleteQsText() {
+                var elements = d3.selectAll(".qs");
+                var transitionDuration = 400;
+
+                elements.transition()
+                        .duration(transitionDuration)
+                        .attr("y", height + margin.bottom + 50)
+                        .each("end", function () {d3.selectAll(".qs").remove();});
+            }
+
+//--------------------------- update transition shizzle ------------------------------
+
+            d3.selectAll("input").on("change", change);
+
+            var timeout = setTimeout(function() {
+                d3.select("input[value=\"relative\"]").property("checked", true).each(change);
+            }, 2000);
+
+            function change() {
+                clearTimeout(timeout);
+				redoY0Stacked();
+                //deleteQsText(); // delete Qs from other views
+                yUpdateLabel();
+			
+                if (this.value === "grouped") transitionGrouped();
+				else if(this.value == "relative") transitionRelative();
+				else if(this.value == "compare") transitionLineGraph();
+				else if(this.value == "stacked") transitionStacked();
+				else if(this.type == "checkbox") transitionCheckbox();
+            }
+			
+			function colorChecks(){
+				var cs = $("input:checkbox");
+				for(i = 0; i < cs.length; i++){
+					if(cs[i].checked){
+						cs[i].parentNode.style.backgroundColor = color(i);
+					} else {
+						cs[i].parentNode.style.backgroundColor = grey;
+					}
+				}
+			}
+
+			function transitionCheckbox(){
+				colorChecks();
+				
+				// determine which graph we are dealing with
+				var graphList = $("input:radio");
+				var graph = "";
+				for(var i = 0; i < graphList.length; i++){
+					if(graphList[i].checked){
+						graph = graphList[i].value;
+					}
+				}
+				// update to the graph we were dealing with
+				if(graph == "grouped"){
+					transitionGrouped();
+				} else if (graph == "relative"){
+					transitionRelative();
+				} else if (graph == "compare"){
+					transitionLineGraph();
+				} else if (graph == "stacked"){
+					transitionStacked();
+				}
+			}
+			
+            function transitionRelative() {
+                if(wasLine) {
+                    linesinX();
+                    wasLine = false;
+                }
+				
+                newYAxis(yRelativeMax);
+
+                rect.transition()
+                        .duration(500)
+                        .delay(function(d, i) { return i * 10; })
+                        .attr("y", function(d, i) { return y((d.y0 + d.y)/amountGamesYear[i]*100); })
+                        .attr("height", function(d, i) { return y(d.y0/amountGamesYear[i]*100) - y((d.y0 + d.y)/amountGamesYear[i]*100); })
+                        .transition()
+                        .attr("x", function(d) { return x(d.x); })
+                        .attr("width", x.rangeBand())
+						.style("fill", function(d, i, j) {
+							if(getChecked(d.genre)) {return color(j); }
+							else { return grey; }})
+						.attr("fill-opacity", function(d) {
+							if(getChecked(d.genre)){ return 1}
+							else { return 1}})
+						.attr("stroke-opacity", function(d) {
+							if(getChecked(d.genre)){ return 1}
+							else { return 1}});
+
+                var sizeOneLetter = x.rangeBand()*1.8;
+                //the maximum size of a number must be limited to the width of the bar (the findMagnitude will determine how many numbers there can be max)
+                maxSizeText = sizeOneLetter/findMagnitudeNumber(yGroupMaxYear);
+
+                barNumbersText.transition().duration(400)
+                        .delay(function(d, i) { return i * 10; })
+                        .attr("x", function(d) { return x(d.x) + x.rangeBand()/2;})
+                        .attr("y", function(d, i) {
+                            return y((d.y0 + d.y)/amountGamesYear[i]*100) + // bottom of rect
+                                    (y(d.y0/amountGamesYear[i]*100) - y((d.y0 + d.y)/amountGamesYear[i]*100)) / 2; }) // + height/2
+                        .text(function(d, i) { return Math.round(d.y / amountGamesYear[i] * 100) })
+                        .transition()
+                        .duration(400)
+                        .style("font-size", function(d,i) {
+							if(getChecked(d.genre)){
+								var size = Math.min(maxSizeText, (d.y / amountGamesYear[i])*100) + 5;
+								if(size > maxSizeText){
+									return maxSizeText + "px";
+								} else if (size < minSizeText){
+									return 0 + "px";
+								} else {
+									return size + "px";
+								}
+							} else { 
+								return 0 + "px";
+							}})
+                        .style("text-anchor", "middle");
+            }
+
+            function transitionLineGraph() {
+                barNumbersText.transition()
+                        .duration(400)
+                        .attr("y", height)
+                        .style("font-size", function() {return 0 + "px"});
+
+                rect.transition()
+                        .duration(300)
+                        .delay(function(d, i) { return i * 10; })
+                        .attr("height", function() {return 0;})
+                        .attr("y", function() {return height;});
+				
+				yCompareMax = d3.max(layersQ, function(layersQ) {
+					return d3.max( layersQ,function(d) {
+						if(getChecked(d.genre)) {return d.y; } else { return 0; }}); });
+                newYAxis(yCompareMax);
+
+                lines.transition()
+                        .duration(600)
+                        .delay(function(d, i) { return i * 10; })
+                        .attr("d", function(d) { return line(d); })
+						.attr("stroke", function(d, i) {
+							if(getChecked(d[0].genre)) {return color(i); }
+							else { return grey; }})
+                        .attr("stroke-width", 2)
+						.attr("stroke-opacity", function(d) {
+							if(getChecked(d[0].genre)){return 1}
+							else { return 1}});
+
+                //initQsText(); // show the Qs below the years on the x-axis
+
+                wasLine = true;
+            }
+
+            function transitionGrouped() {
+                if(wasLine) {
+                    linesinX();
+                    wasLine = false;
+                }
+				
+				yGroupMaxYear = d3.max(layersYear, function(layer) { 
+					return d3.max( layer, function(d) { 
+						if(getChecked(d.genre)) {return d.y; } else { return 0; }}); });
+                newYAxis(yGroupMaxYear);
+				
+				var cs = $("#checks input:checked");
+				var c = cs.length;
+				var widthbar = x.rangeBand() / c;
+				var drawn = 0;
+				
+                rect.transition()
+                        .duration(600)
+                        .delay(function(d, i) { return i * 10; })
+                        .attr("x", function(d, i, j) { 
+							var value = x(d.x) + x.rangeBand() / c * drawn;
+							if(i==10) {
+								if(getChecked(d.genre)) {
+									drawn++;
+								}
+								if(j==genres.length-1){
+									drawn = 0;
+								}
+							}
+							return  value})
+                        .attr("width", function(d){ 
+							if(getChecked(d.genre)){ return widthbar} 
+							else { return 0}})
+						.style("fill", function(d, i, j) {
+							if(getChecked(d.genre)) {return color(j); }
+							else { return grey; }})
+                        .transition()
+                        .attr("y", function(d) { return y(d.y); })
+                        .attr("height", function(d) { return height - y(d.y); });
+
+                var sizeText = widthbar/2;
+
+                barNumbersText.transition()
+                        .duration(400)
+                        .delay(function(d, i) { return i * 10; })
+                        .attr("x", function(d, i, j) { 
+							//console.log(d);
+							var value = x(d.x) + x.rangeBand() / c * drawn + widthbar/2;
+							if(i==10) {
+								if(getChecked(d.genre)) {
+									drawn++;
+								}
+								if(j==genres.length-1){
+									drawn = 0;
+								}
+							}
+							return  value})
+                        .attr("y", function(d) { return y(d.y)-4 })
+                        .text(function(d) { return d.y })
+                        .transition().duration(400)
+                        .style("font-size", function(d) {
+							if(getChecked(d.genre)){
+								var size =  sizeText;
+								if(size > maxSizeText){
+									return maxSizeText + "px";
+								} else if (size < minSizeText){
+									return 0 + "px";
+								} else {
+									return size + "px";
+								}
+							} else { 
+								return 0 + "px";
+							}})
+                        .style("text-anchor", "middle");
+            }
+			
+			function redoY0Stacked(){
+				var genreOrder = [];
+				var boxes = $("input:checkbox");
+				for(var i = 0; i < boxes.length; i++){
+					if(boxes[i].checked){
+						genreOrder.push(boxes[i].value);	
+					}
+				}
+				for(var i = 0; i < boxes.length; i++){
+					if(!boxes[i].checked){
+						genreOrder.push(boxes[i].value);	
+					}
+				}
+				//console.log(genreOrder);
+				var newDataYear = []; // create new object!
+				// switch element 0 and 'layer' --> move layer to bottom
+				for(var i = 0; i < genreOrder.length; i++){
+					var index = 0;
+					for(var j = 0; j < genreOrder.length; j++){
+						if(genreOrder[i] == dataYear[j].genre){
+							index = j;
+						}
+					}
+					newDataYear.push(dataYear[index]);
+				}
+				updateLayerStack(newDataYear);
+				return newDataYear;
+			}
+			
+            function transitionStacked() {
+                if(wasLine) {
+                    linesinX();
+                    wasLine = false;
+                }
+		
+				yStackMaxYear = d3.max(layersYear, function(layer) { 
+					return d3.max( layer, function(d) { 
+						if(getChecked(d.genre)) {return d.y0 + d.y; } else { return 0; }}); });
+                newYAxis(yStackMaxYear);
+				
+                rect.transition()
+                        .duration(600)
+                        .delay(function(d, i) { return i * 10; })
+                        .attr("y", function(d) { 
+							if(getChecked(d.genre)){return y(d.y0 + d.y); }
+							else { return 0 }})
+						.attr("height", function(d) { 
+							if(getChecked(d.genre)){return y(d.y0) - y(d.y0 + d.y); }
+							else { return 0 }})
+                        .transition()
+                        .attr("x", function(d) { return x(d.x); })
+                        .attr("width", x.rangeBand())
+						.style("fill", function(d, i, j) {
+							if(getChecked(d.genre)) {return color(j); }
+							else { return grey; }})
+						.attr("fill-opacity", function(d) {
+							if(getChecked(d.genre)){ return 1}
+							else { return 1}})
+						.attr("stroke-opacity", function(d) {
+							if(getChecked(d.genre)){ return 1}
+							else { return 1}});
+
+                var sizeOneLetter = x.rangeBand()*1.8;
+				
+                //the maximum size of a number must be limited to the width of the bar (the findMagnitude will determine how many numbers there can be max)
+                maxSizeText = sizeOneLetter/findMagnitudeNumber(yStackMaxYear);
+				
+                var maxgroup = yStackMaxYear + yStackMaxYear *.1;
+                barNumbersText.transition().duration(400)
+                        .delay(function(d, i) { return i * 10; })
+                    //left side bar + width bar / 2 - size text/2
+                        .attr("x", function(d) { return x(d.x) + x.rangeBand()/2;})
+                        .attr("y", function(d) { return y(d.y0 + d.y)+(y(d.y0) - y(d.y0 + d.y))/2 + (maxSizeText * d.y/maxgroup)/2; })
+                        .text(function(d) { return d.y })
+                        .transition()
+                        .duration(400)
+                        .style("font-size", function(d) {
+							if(getChecked(d.genre)){
+								var size =   maxSizeText * d.y/maxgroup + 5;
+								if(size > maxSizeText){
+									return maxSizeText + "px";
+								} else if (size < minSizeText){
+									return 0 + "px";
+								} else {
+									return size + "px";
+								}
+							} else { 
+								return 0 + "px";
+							}})
+                        .style("text-anchor", "middle");
+            }
+
+            function linesinX(){
+                lines.transition()
+                        .duration(400)
+                        .delay(function(d, i) { return i * 20; })
+                        .attr("d", function(d) { return lineinX(d); })
+                        .attr("stroke-width", 0);
+            }
+
+            function newYAxis(maxY) {
+                y.domain([0,maxY]);
+
+                yAxis.scale(y);
+
+                gy.transition()
+                        .duration(2500)
+                        .call(yAxis)
+                makeAxisMinor();
+            }
+
+            function formatAmount(d) {
+                return d === y.domain()[1]
+                        ? d + " games"
+                        : d;
+            }
+
+            function makeAxisMinor() {
+                gy.selectAll("g").filter(function(d) { return d; })
+                        .classed("minor", true);
+            }
+
+            function findMagnitudeNumber(max) {
+                var num = 0;
+                var temp = max;
+                while(temp>=1){
+                    temp = temp/10;
+                    num++;
+                }
+                return num;
+            }
+        }
+        //
+		
+		function highlightGenre(genre,color){
+			var cs = $("input:checkbox");
+			for(i = 0; i < cs.length; i++){
+				if(cs[i].value == genre){
+					if(color == null){
+						cs[i].parentNode.style.border = null;
+					} else {
+						cs[i].parentNode.style.border = "1px solid " + color;
+					}
+				} 
+			}
+		}
+		
+		var colorArray = ["#34DA89", "#83E2DE", "#63B5E8", "#6080FF", "#5F40CF"];
+		var color = d3.scale.ordinal()
+				.range(colorArray);
+		var grey = "#DBDBDB";
+		var highlight = "#BC2DCF";
+				
+		function mouseOver(label){
+			highlightGenre(label.title, highlight);
+			
+			d3.selectAll("rect")
+				.style("stroke", function (d) {
+					return label.title == d.genre ? highlight : null;
+					});
+			var paths = d3.selectAll("path.line")
+				.style("stroke", function (d,i) {
+					if(label.title == d[0].genre){
+						return highlight;
+					} else if(getChecked(d[0].genre)){
+						return color(i);
+					} else {
+						return grey;
+					}
+				});
+		}
+		
+		function mouseOut(label){
+			highlightGenre(label.title, null);
+			
+			d3.selectAll("rect")
+					.style("stroke", function (d) {
+									return null;
+								});
+			var paths = d3.selectAll("path.line")
+				.style("stroke", function (d,i) {
+					if(getChecked(d[0].genre)){
+						return color(i);
+					} else {
+						return grey;
+					}
+				});
+		}
+		
+    </script>
+
+<div id="info">
+	 <label>Data last updated on 14/05/2015</label><br>
+	 <a href="http://steampowered.com" target="_blank">Powered by Steam</a>
+</div>
+
+</body>
+</html>
