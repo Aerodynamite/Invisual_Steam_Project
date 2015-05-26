@@ -7,7 +7,7 @@
 	<script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
     <script src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
     <script src="data1-1600.json"></script>
-
+	
     <style>
         body {
             font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
@@ -93,7 +93,15 @@
 <div id="id01"></div>
 
     <script>
-
+		
+		/*
+			A lot of small technical problems were solved with http://stackoverflow.com/ and  http://www.w3schools.com
+			Basic checkbox information: http://www.w3schools.com/jsref/dom_obj_checkbox.asp
+			Json file handling: http://stackoverflow.com/questions/16649829/read-json-file-data-using-javascript
+			
+			D3 base code: 
+			
+		*/
         displayLoadingScreen();
 		
 		var data = {};
@@ -150,6 +158,7 @@
         }
 
         // genres is used to RETURN the genres
+		// this function is executed in the preprocessing of the json files
         function combineAndSortGenresAndDates(json, genres) {
             // Melvin code 2
             var all_genres = [];
@@ -358,7 +367,9 @@
 
             return dataQs;
         }
-
+		
+		// Turn the data from quarters into full years
+		// this function is executed in the preprocessing of the json files
         function FromQsToYears(dataQs) {
             //simplify the data (filter out the months)
             var dataYears = [];
@@ -457,12 +468,7 @@
 
         //////////////// VISUALIZATION
         function visualise(dataQs, dataYear, genres) {
-            /*console.log("dataQs");
-            console.log(dataQs);
-            console.log("dataYear");
-            console.log(dataYear);
-            console.log("genres");
-            console.log(genres);*/
+        
 
 //--------------------------- General visualisation stuff -------------------------
             // Variables
@@ -1210,6 +1216,9 @@
 				yStackMaxYear = d3.max(layersYear, function(layer) { 
 					return d3.max( layer, function(d) { 
 						if(getChecked(d.genre)) {return d.y0 + d.y; } else { return 0; }}); });
+				var yMax = d3.max(layersYear, function(layer) { 
+					return d3.max( layer, function(d) { 
+						if(getChecked(d.genre)) {return d.y; } else { return 0; }}); });
                 newYAxis(yStackMaxYear);
 				
                 rect.transition()
@@ -1250,7 +1259,7 @@
                         .duration(400)
                         .style("font-size", function(d) {
 							if(getChecked(d.genre)){
-								var size =   maxSizeText * d.y/maxgroup + 5;
+								var size =   maxSizeText * d.y/(yMax) *1.5;
 								if(size > maxSizeText){
 									return maxSizeText + "px";
 								} else if (size < minSizeText){
@@ -1319,7 +1328,8 @@
 			}
 		}
 		
-		var colorArray = ["#34DA89", "#83E2DE", "#63B5E8", "#6080FF", "#5F40CF"];
+		// Colors are picked from https://color.adobe.com
+		var colorArray = ["#6C49C9", "#615CE8", "#6785FF", "#699FE8", "#40BDFF"];
 		var color = d3.scale.ordinal()
 				.range(colorArray);
 		var grey = "#DBDBDB";
