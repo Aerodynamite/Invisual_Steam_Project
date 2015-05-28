@@ -63,6 +63,7 @@
 </head>
 
 <form id="radio">
+	<!--radiobuttons http://bl.ocks.org/mbostock/3943967-->
     <label><input type="radio" name="mode" value="grouped"> Grouped</label>
     <label><input type="radio" name="mode" value="relative"> Stacked (relative) </label>
     <label><input type="radio" name="mode" value="stacked" checked> Stacked (absolute)</label>
@@ -71,6 +72,7 @@
 
 <form id="checks"> 
 	<label> Select your genres </label><br><br>
+	<!--Basic checkbox information: http://www.w3schools.com/jsref/dom_obj_checkbox.asp-->
 	<label title="Action" id="Action" onmouseover="mouseOver(this)" onmouseout="mouseOut(this)"><input type="checkbox" name="genre" value="Action" checked >Action</label><br>
 	<label title="Indie" id="Indie" onmouseover="mouseOver(this)" onmouseout="mouseOut(this)"><input type="checkbox" name="genre" value="Indie" checked>Indie</label><br>
 	<label title="Strategy" id="Strategy" onmouseover="mouseOver(this)" onmouseout="mouseOut(this)"><input type="checkbox" name="genre" value="Strategy" checked>Strategy</label><br>
@@ -95,11 +97,10 @@
     <script>
 		
 		/*
+			Overview of sources:
 			A lot of small technical problems were solved with http://stackoverflow.com/ and  http://www.w3schools.com
-			
 			Basic checkbox information: http://www.w3schools.com/jsref/dom_obj_checkbox.asp
 			Json file handling: http://stackoverflow.com/questions/16649829/read-json-file-data-using-javascript
-			
 			D3 base code: 
 			grouped bar chart: http://bl.ocks.org/mbostock/3887051
 			radiobuttons, transitions and stacked bar chart: http://bl.ocks.org/mbostock/3943967
@@ -113,6 +114,7 @@
 		var dataQs = {};
 		var dataYear = {};
 		
+		// Json file handling: http://stackoverflow.com/questions/16649829/read-json-file-data-using-javascript
     	$.getJSON("newData.json", function(json) {
 			var data = json;
 			$.getJSON("genres.json", function(genreData) {
@@ -129,7 +131,8 @@
 				});
 			});
 		});
-
+		
+		// Basic checkbox information: http://www.w3schools.com/jsref/dom_obj_checkbox.asp
 		function getChecked(genre){
 			var boxes = $("input:checkbox");
 			for(var i = 0; i < boxes.length; i++){
@@ -477,8 +480,10 @@
 //--------------------------- General visualisation stuff -------------------------
             // Variables
             // brackets zodat ik die hoop hier kan toeklappen in mijn IDE :P sorry als het u stoort
+			// bron grouped bar chart: http://bl.ocks.org/mbostock/3887051
             {
                 // General
+				// Y-axis: http://bl.ocks.org/mbostock/4323929
                 var margin = {top: 40, right: 100, bottom: 40, left: 80},
                         width = 1054 - margin.left - margin.right,
                         height = 520 - margin.top - margin.bottom;
@@ -583,6 +588,7 @@
             //-----
 
             // Update the layer stack for the stacked bar charts according to the new data
+			// bron stack: http://bl.ocks.org/mbostock/3943967
             function updateLayerStack(data) {
                 var stack = d3.layout.stack(),
                         genreCounter = 0;
@@ -598,6 +604,7 @@
             }
 
 //--------------------------- Grouped view  -------------------------
+			// bron layers: http://bl.ocks.org/mbostock/3943967
             function initGrouped(data) {
                 updateLayerStack(data);
 
@@ -613,6 +620,7 @@
             }
 
 //--------------------------- Stacked view  -------------------------
+			// bron layers:  http://bl.ocks.org/mbostock/3943967
             function initStacked(data) {
                 updateLayerStack(data);
 
@@ -631,6 +639,7 @@
             }
 
 //--------------------------- Relative view  -------------------------
+			// bron layers:  http://bl.ocks.org/mbostock/3943967
             function initRelative(data) {
                 updateLayerStack(data);
 
@@ -657,8 +666,8 @@
             }
 
 //--------------------------- Init lines  -------------------------
-            // ik zou dit in het begin van de initCompareLines functie willen zetten maar om de een of andere
-            // mysterieuze reden werkt dat niet dan.
+			// bronnen line graph: http://bl.ocks.org/mbostock/3883245 and http://bl.ocks.org/mbostock/3884955
+			// bron layers:  http://bl.ocks.org/mbostock/3943967
             function initCompare() {
                 var genreCounter = 0,
                         stack = d3.layout.stack();
@@ -689,13 +698,15 @@
              console.log("layersQ");
              console.log(layersQ);
              */
+			// bron grouped bar chart: http://bl.ocks.org/mbostock/3887051
             function initView() {
                 xAxis = d3.svg.axis()
                         .scale(x)
                         .tickSize(0)
                         .tickPadding(6)
                         .orient("bottom");
-
+				
+				// Y-axis: http://bl.ocks.org/mbostock/4323929
                 yAxis = d3.svg.axis()
                         .scale(y)
                         .tickSize(-width)
@@ -798,7 +809,6 @@
 							}})
                         .attr("fill", "black");
 
-                // TODO: move this to appropriate place
                 rect.transition()
                         .delay(function(d, i) { return i * 10; })
                         .attr("y", function(d) { return y(d.y0 + d.y); })
@@ -868,6 +878,7 @@
             }
 
 //--------------------------- Compare lines aanmaken -------------------------
+			// bronnen line graph: http://bl.ocks.org/mbostock/3883245 and http://bl.ocks.org/mbostock/3884955
             function initCompareLines(data) {
 
                 var nbQs = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,
@@ -983,6 +994,7 @@
 				else if(this.type == "checkbox") transitionCheckbox();
             }
 			
+			// bron checkbox information: http://www.w3schools.com/jsref/dom_obj_checkbox.asp
 			function colorChecks(){
 				var cs = $("input:checkbox");
 				for(i = 0; i < cs.length; i++){
@@ -993,7 +1005,8 @@
 					}
 				}
 			}
-
+			
+			// bron radiobuttons http://bl.ocks.org/mbostock/3943967
 			function transitionCheckbox(){
 				colorChecks();
 				
@@ -1017,6 +1030,7 @@
 				}
 			}
 			
+			// bron transitie: http://bl.ocks.org/mbostock/3943967
             function transitionRelative() {
                 if(wasLine) {
                     linesinX();
@@ -1071,7 +1085,8 @@
 							}})
                         .style("text-anchor", "middle");
             }
-
+			
+			// bron transitie: http://bl.ocks.org/mbostock/3943967
             function transitionLineGraph() {
                 barNumbersText.transition()
                         .duration(400)
@@ -1105,7 +1120,8 @@
 
                 wasLine = true;
             }
-
+			
+			// bron transitie: http://bl.ocks.org/mbostock/3943967
             function transitionGrouped() {
                 if(wasLine) {
                     linesinX();
@@ -1211,6 +1227,7 @@
 				return newDataYear;
 			}
 			
+			// bron transitie: http://bl.ocks.org/mbostock/3943967
             function transitionStacked() {
                 if(wasLine) {
                     linesinX();
